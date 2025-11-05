@@ -15,66 +15,18 @@ import Profile from '@/DashboardGeneral/Pages/Dashboard/Profile.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    {
-      path: '/',
-      name: 'Accueil',
-      component: Accueil
-    },
-    {
-      path: '/connexion',
-      name: 'Connexion',
-      component: Connexion
-    },
-    {
-      path: '/inscription',
-      name: 'Inscription',
-      component: Inscription
-    },
-    {
-      path: '/dashboard',
-      name: 'Dashboard',
-      component: Dashboard
-    },
-    {
-      path: '/commandes',
-      name: 'Commandes',
-      component: Commandes
-    },
-    {
-      path: '/services',
-      name: 'Services',
-      component: Services
-    },
-    {
-      path: '/statistics',
-      name: 'Statistics',
-      component: Statistics
-    },
-    {
-      path: '/notifications',
-      name: 'Notifications',
-      component: Notifications
-    },
-    {
-      path: '/parametres',
-      name: 'Parametres',
-      component: Parametres
-    },
-    {
-      path: '/avis',
-      name: 'Avis',
-      component: Avis
-    },
-    {
-      path: '/portefeuille',
-      name: 'Portefeuille',
-      component: Portefeuille
-    },
-    {
-      path: '/profile',
-      name: 'Profile',
-      component: Profile
-    },
+    { path: '/', component: Accueil },
+    { path: '/connexion', component: Connexion },
+    { path: '/inscription', component: Inscription },
+    { path: '/dashboard', component: Dashboard },
+    { path: '/commandes', component: Commandes },
+    { path: '/services', component: Services },
+    { path: '/statistics', component: Statistics },
+    { path: '/notifications', component: Notifications },
+    { path: '/parametres', component: Parametres },
+    { path: '/avis', component: Avis },
+    { path: '/portefeuille', component: Portefeuille },
+    { path: '/profile', component: Profile },
   ],
 })
 

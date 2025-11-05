@@ -1188,43 +1188,46 @@ const getAlertIcon = (type) => {
 // Fonction pour récupérer l'utilisateur actuel depuis localStorage ou données mock
 const getCurrentUser = () => {
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
-
-    if (!currentUser.id) {
+    
+    // Si l'utilisateur existe dans le localStorage, utiliser ses vraies données
+    if (currentUser.id) {
         return {
-            id: 'USR001',
-            first_name: 'Jean',
-            last_name: 'Dupont',
-            email: '',
-            phone: '+2250700000000',
-            city: 'Abidjan',
-            isVerified: false,
-            statut_kyc: 'non_verifie',
-            date_inscription: new Date().toISOString(),
-            documents: {
+            id: currentUser.id,
+            first_name: currentUser.first_name || currentUser.name?.split(' ')[0] || '',
+            last_name: currentUser.last_name || currentUser.name?.split(' ').slice(1).join(' ') || '',
+            email: currentUser.email || '',
+            phone: currentUser.phone || '',
+            city: currentUser.city || '',
+            isVerified: currentUser.isVerified || false,
+            statut_kyc: currentUser.statut_kyc || 'non_verifie',
+            date_inscription: currentUser.date_inscription || currentUser.joinDate || new Date().toISOString(),
+            documents: currentUser.documents || {
                 identityPhoto: null,
                 identityCard: null,
                 identityBack: null
-            }
+            },
+            // AJOUT IMPORTANT : Récupérer le type de service réel
+            serviceType: currentUser.serviceType || currentUser.type || ''
         }
     }
 
-    const nameParts = currentUser.name ? currentUser.name.split(' ') : ['', '']
-
+    // Fallback seulement si vraiment aucun utilisateur trouvé
     return {
-        id: currentUser.id,
-        first_name: currentUser.first_name || nameParts[0] || '',
-        last_name: currentUser.last_name || nameParts.slice(1).join(' ') || '',
-        email: currentUser.email || '',
-        phone: currentUser.phone || '',
-        city: currentUser.city || '',
-        isVerified: currentUser.isVerified || false,
-        statut_kyc: currentUser.statut_kyc || 'non_verifie',
-        date_inscription: currentUser.date_inscription || currentUser.joinDate || new Date().toISOString(),
-        documents: currentUser.documents || {
+        id: 'USR001',
+        first_name: 'Jean',
+        last_name: 'Dupont',
+        email: '',
+        phone: '+2250700000000',
+        city: 'Abidjan',
+        isVerified: false,
+        statut_kyc: 'non_verifie',
+        date_inscription: new Date().toISOString(),
+        documents: {
             identityPhoto: null,
             identityCard: null,
             identityBack: null
-        }
+        },
+        serviceType: '' // Laisser vide au lieu d'une valeur par défaut
     }
 }
 
@@ -1378,13 +1381,8 @@ onMounted(() => {
 const initializeData = () => {
     user.value = getCurrentUser()
 
-    Object.assign(profileForm, {
-        first_name: user.value.first_name,
-        last_name: user.value.last_name,
-        email: user.value.email,
-        phone: user.value.phone,
-        city: user.value.city
-    })
+    // Utiliser le serviceType réel de l'utilisateur pour la boutique par défaut
+    const userServiceType = user.value.serviceType || 'pressing-linge'
 
     const savedShops = localStorage.getItem('userShops')
     if (savedShops) {
@@ -1393,7 +1391,7 @@ const initializeData = () => {
         const defaultShop = {
             id: 'SHOP_' + Date.now(),
             name: `${user.value.first_name} ${user.value.last_name}`.trim() || 'Ma Boutique',
-            category: 'pressing-linge',
+            category: userServiceType, // ← Utiliser le vrai serviceType
             city: user.value.city || 'Abidjan',
             mainAddress: '',
             zone_couverture: '',
@@ -1403,8 +1401,8 @@ const initializeData = () => {
             documents: {
                 photos: []
             },
-            prestations: ['pressing-linge'],
-            mainPrestation: 'pressing-linge'
+            prestations: [userServiceType], // ← Utiliser le vrai serviceType
+            mainPrestation: userServiceType // ← Utiliser le vrai serviceType
         }
 
         userShops.value = [defaultShop]

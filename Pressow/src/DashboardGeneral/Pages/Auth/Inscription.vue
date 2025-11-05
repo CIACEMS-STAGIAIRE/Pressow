@@ -41,102 +41,105 @@
         </div>
         <div class="auth-content">
           <form @submit.prevent="handleSubmit" class="auth-form">
-            <div class="form-section">
+            <div class="form-group-Section">
+              <div class="form-section">
+                <div class="form-group fade-in">
+                  <label for="name" class="form-label">Nom complet</label>
+                  <div class="input-wrapper">
+                    <i class="fas fa-user input-icon"></i>
+                    <input id="name" name="name" v-model="formData.name" placeholder="Jean Dupont" required
+                      class="form-input" />
+                  </div>
+                </div>
+
+                <div class="form-group fade-in">
+                  <label for="companyName" class="form-label">Nom de l'entreprise</label>
+                  <div class="input-wrapper">
+                    <i class="fas fa-building input-icon"></i>
+                    <input id="companyName" name="companyName" v-model="formData.companyName"
+                      placeholder="Ex: Pressing Jean" required class="form-input" />
+                  </div>
+                </div>
+
+                <div class="form-group fade-in">
+                  <label for="serviceType" class="form-label">Type de service</label>
+                  <div class="select-wrapper">
+                    <i class="fas fa-concierge-bell input-icon"></i>
+                    <select id="serviceType" v-model="formData.serviceType" required class="form-select">
+                      <option value="" disabled>Sélectionnez votre type de service</option>
+                      <option v-for="service in serviceTypes" :key="service.value" :value="service.value">
+                        {{ service.label }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <div class="form-group fade-in">
-                <label for="name" class="form-label">Nom complet</label>
+                <label for="email" class="form-label">
+                  Adresse email <span class="optional-label">(facultatif)</span>
+                </label>
                 <div class="input-wrapper">
-                  <i class="fas fa-user input-icon"></i>
-                  <input id="name" name="name" v-model="formData.name" placeholder="Jean Dupont" required
+                  <i class="fas fa-envelope input-icon"></i>
+                  <input id="email" name="email" type="email" v-model="formData.email"
+                    placeholder="jean.dupont@example.com" class="form-input" />
+                </div>
+              </div>
+
+              <div class="form-group slide-in">
+                <label for="phone" class="form-label">Numéro de téléphone</label>
+                <div class="input-wrapper">
+                  <i class="fas fa-phone input-icon"></i>
+                  <input id="phone" name="phone" type="tel" v-model="formData.phone" placeholder="+33612345678" required
                     class="form-input" />
                 </div>
               </div>
 
-              <div class="form-group fade-in">
-                <label for="companyName" class="form-label">Nom de l'entreprise</label>
+              <div class="form-group slide-in">
+                <label for="password" class="form-label">Mot de passe</label>
                 <div class="input-wrapper">
-                  <i class="fas fa-building input-icon"></i>
-                  <input id="companyName" name="companyName" v-model="formData.companyName"
-                    placeholder="Ex: Pressing Jean" required class="form-input" />
+                  <i class="fas fa-lock input-icon"></i>
+                  <input id="password" name="password" :type="showPassword ? 'text' : 'password'"
+                    v-model="formData.password" placeholder="••••••••" required class="form-input password-input" />
+                  <button type="button" @click="togglePasswordVisibility" class="password-toggle">
+                    <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                  </button>
                 </div>
               </div>
 
               <div class="form-group fade-in">
-                <label for="serviceType" class="form-label">Type de service</label>
+                <label for="confirmPassword" class="form-label">Confirmer le mot de passe</label>
+                <div class="input-wrapper">
+                  <i class="fas fa-lock input-icon"></i>
+                  <input id="confirmPassword" name="confirmPassword" :type="showConfirmPassword ? 'text' : 'password'"
+                    v-model="formData.confirmPassword" placeholder="••••••••" required class="form-input password-input"
+                    :class="{ error: formData.confirmPassword && !passwordsMatch }" />
+                  <button type="button" @click="toggleConfirmPasswordVisibility" class="password-toggle">
+                    <i :class="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                  </button>
+                </div>
+                <div v-if="formData.confirmPassword && !passwordsMatch" class="error-message">
+                  <i class="fas fa-exclamation-circle"></i>
+                  Les mots de passe ne correspondent pas
+                </div>
+              </div>
+
+              <div class="form-group fade-in">
+                <label for="city" class="form-label">Ville</label>
                 <div class="select-wrapper">
-                  <i class="fas fa-concierge-bell input-icon"></i>
-                  <select id="serviceType" v-model="formData.serviceType" required class="form-select">
-                    <option value="" disabled>Sélectionnez votre type de service</option>
-                    <option v-for="service in serviceTypes" :key="service.value" :value="service.value">
-                      {{ service.label }}
+                  <i class="fas fa-map-marker-alt input-icon"></i>
+                  <select id="city" v-model="formData.city" required class="form-select">
+                    <option value="" disabled>Sélectionnez votre ville</option>
+                    <option v-for="city in cities" :key="city.name" :value="city.name">
+                      {{ city.name }}
                     </option>
                   </select>
                 </div>
               </div>
             </div>
 
-            <div class="form-group fade-in">
-              <label for="email" class="form-label">
-                Adresse email <span class="optional-label">(facultatif)</span>
-              </label>
-              <div class="input-wrapper">
-                <i class="fas fa-envelope input-icon"></i>
-                <input id="email" name="email" type="email" v-model="formData.email"
-                  placeholder="jean.dupont@example.com" class="form-input" />
-              </div>
-            </div>
-
-            <div class="form-group slide-in">
-              <label for="phone" class="form-label">Numéro de téléphone</label>
-              <div class="input-wrapper">
-                <i class="fas fa-phone input-icon"></i>
-                <input id="phone" name="phone" type="tel" v-model="formData.phone" placeholder="+33612345678" required
-                  class="form-input" />
-              </div>
-            </div>
-
-            <div class="form-group slide-in">
-              <label for="password" class="form-label">Mot de passe</label>
-              <div class="input-wrapper">
-                <i class="fas fa-lock input-icon"></i>
-                <input id="password" name="password" :type="showPassword ? 'text' : 'password'"
-                  v-model="formData.password" placeholder="••••••••" required class="form-input password-input" />
-                <button type="button" @click="togglePasswordVisibility" class="password-toggle">
-                  <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-                </button>
-              </div>
-            </div>
-
-            <div class="form-group fade-in">
-              <label for="confirmPassword" class="form-label">Confirmer le mot de passe</label>
-              <div class="input-wrapper">
-                <i class="fas fa-lock input-icon"></i>
-                <input id="confirmPassword" name="confirmPassword" :type="showConfirmPassword ? 'text' : 'password'"
-                  v-model="formData.confirmPassword" placeholder="••••••••" required class="form-input password-input"
-                  :class="{ error: formData.confirmPassword && !passwordsMatch }" />
-                <button type="button" @click="toggleConfirmPasswordVisibility" class="password-toggle">
-                  <i :class="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-                </button>
-              </div>
-              <div v-if="formData.confirmPassword && !passwordsMatch" class="error-message">
-                <i class="fas fa-exclamation-circle"></i>
-                Les mots de passe ne correspondent pas
-              </div>
-            </div>
-
-            <div class="form-group fade-in">
-              <label for="city" class="form-label">Ville</label>
-              <div class="select-wrapper">
-                <i class="fas fa-map-marker-alt input-icon"></i>
-                <select id="city" v-model="formData.city" required class="form-select">
-                  <option value="" disabled>Sélectionnez votre ville</option>
-                  <option v-for="city in cities" :key="city.name" :value="city.name">
-                    {{ city.name }}
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <button type="submit" class="submit-button" :class="{ pulse: !formValid, glow: formValid }"
+            <div class="submit-button-container">
+              <button type="submit" class="submit-button" :class="{ pulse: !formValid, glow: formValid }"
               :disabled="!formValid || isLoading">
               <span class="button-content">
                 <template v-if="isLoading">
@@ -150,6 +153,7 @@
               </span>
               <div class="button-shine"></div>
             </button>
+            </div>
           </form>
 
           <div class="toggle-mode">
@@ -443,7 +447,7 @@ const login = (user: User): void => {
   // Sauvegarder l'utilisateur dans localStorage
   localStorage.setItem('currentUser', JSON.stringify(user))
   localStorage.setItem('authToken', 'mock-jwt-token')
-  
+
   // Mettre à jour les données partagées pour le DashboardLayout
   updateSharedUserData(user)
 }
@@ -454,7 +458,7 @@ const updateSharedUserData = (user: User): void => {
     detail: { user }
   })
   window.dispatchEvent(userUpdateEvent)
-  
+
   // Stocker aussi dans sessionStorage pour un accès immédiat
   sessionStorage.setItem('currentUserData', JSON.stringify(user))
 }
@@ -529,7 +533,7 @@ const verifyOtp = async (): Promise<void> => {
     showOtpModal.value = false
     showReopenOtpButton.value = false
     resetOtp()
-    
+
     setTimeout(() => {
       router.push('/Dashboard')
     }, 1500)
@@ -557,11 +561,11 @@ const cancelOtp = (): void => {
 const reopenOtpModal = (): void => {
   showOtpModal.value = true
   showReopenOtpButton.value = false
-  
+
   if (otpTimer.value <= 0) {
     showNotification(
       'success',
-      'Code disponible', 
+      'Code disponible',
       'Le code OTP précédent est toujours valable. Vous pouvez le renvoyer si besoin.'
     )
   }
@@ -707,7 +711,7 @@ const handleSubmit = async (): Promise<void> => {
       const otp = generateOtp()
       startOtpTimer()
     }
-    
+
     showOtpModal.value = true
     showReopenOtpButton.value = false
   } catch (error) {
@@ -764,7 +768,7 @@ const showCopySuccess = (): void => {
     </div>
   `
   document.body.appendChild(notification)
-  
+
   setTimeout(() => {
     if (document.body.contains(notification)) {
       document.body.removeChild(notification)
@@ -807,4 +811,4 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped src="@/DashboardGeneral/Assets/Styles/Authentification.css"></style>
+<style src="@/DashboardGeneral/Assets/Styles/Authentification.css"></style>

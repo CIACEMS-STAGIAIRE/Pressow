@@ -14,17 +14,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
   position: relative;
   overflow: hidden;
   font-family: 'Segoe UI', system-ui, sans-serif;
-}
-
-.auth-container {
-  width: 100%;
-  max-width: 420px;
-  z-index: 10;
-  position: relative;
 }
 
 .auth-container a {
@@ -122,6 +114,8 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
   border-radius: 20px;
   overflow: hidden;
+  width: 100%;
+  min-width: 550px;
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   animation: cardAppear 0.8s ease-out;
   background: rgba(255, 255, 255, 0.95);
@@ -153,10 +147,11 @@
 
 .auth-header {
   text-align: center;
-  padding: 32px 24px 24px;
+  padding: 10px;
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
   display: flex;
   flex-direction: column;
+  margin-bottom: 5px;
 }
 
 .auth-title {
@@ -183,11 +178,10 @@
   margin-top: 8px;
 }
 
-.auth-content {
-  padding: 0 24px 24px;
-}
-
-.auth-form {
+.form-group-Section {
+  padding: 20px;
+  max-height: 35rem;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -363,9 +357,12 @@
   font-style: italic;
 }
 
+.submit-button-container {
+  padding: 20px;
+}
+
 .submit-button {
   width: 100%;
-  margin-top: 16px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   box-shadow:
     0 8px 24px rgba(102, 126, 234, 0.4),
@@ -454,8 +451,8 @@
 }
 
 .toggle-mode {
-  margin-top: 20px;
   text-align: center;
+  padding: 10px 20px;
 }
 
 .toggle-button {

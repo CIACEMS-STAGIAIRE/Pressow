@@ -9,8 +9,7 @@
       </router-link>
 
       <!-- Notifications -->
-      <div v-for="(notification, index) in notifications" :key="index" 
-           class="notification" :class="notification.type">
+      <div v-for="(notification, index) in notifications" :key="index" class="notification" :class="notification.type">
         <div class="notification-content">
           <i :class="notification.type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'"></i>
           <div>
@@ -34,58 +33,45 @@
         </div>
         <div class="auth-content">
           <form @submit.prevent="handleSubmit" class="auth-form">
-            <div class="form-group slide-in">
-              <label for="login" class="form-label">Email ou numéro de téléphone</label>
-              <div class="input-wrapper">
-                <i class="fas fa-user input-icon"></i>
-                <input
-                  id="login"
-                  name="login"
-                  v-model="formData.login"
-                  placeholder="jean.dupont@example.com ou +33612345678"
-                  required
-                  class="form-input"
-                />
+            <div class="form-group-Section">
+              <div class="form-group slide-in">
+                <label for="login" class="form-label">Email ou numéro de téléphone</label>
+                <div class="input-wrapper">
+                  <i class="fas fa-user input-icon"></i>
+                  <input id="login" name="login" v-model="formData.login"
+                    placeholder="jean.dupont@example.com ou +33612345678" required class="form-input" />
+                </div>
+              </div>
+
+              <div class="form-group slide-in">
+                <label for="password" class="form-label">Mot de passe</label>
+                <div class="input-wrapper">
+                  <i class="fas fa-lock input-icon"></i>
+                  <input id="password" name="password" :type="showPassword ? 'text' : 'password'"
+                    v-model="formData.password" placeholder="••••••••" required class="form-input password-input" />
+                  <button type="button" @click="togglePasswordVisibility" class="password-toggle">
+                    <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div class="form-group slide-in">
-              <label for="password" class="form-label">Mot de passe</label>
-              <div class="input-wrapper">
-                <i class="fas fa-lock input-icon"></i>
-                <input
-                  id="password"
-                  name="password"
-                  :type="showPassword ? 'text' : 'password'"
-                  v-model="formData.password"
-                  placeholder="••••••••"
-                  required
-                  class="form-input password-input"
-                />
-                <button type="button" @click="togglePasswordVisibility" class="password-toggle">
-                  <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-                </button>
-              </div>
+            <div class="submit-button-container">
+              <button type="submit" class="submit-button" :class="{ glow: formValid }"
+                :disabled="!formValid || isLoading">
+                <span class="button-content">
+                  <template v-if="isLoading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    Chargement...
+                  </template>
+                  <template v-else>
+                    Se connecter
+                    <i class="fas fa-arrow-right button-icon"></i>
+                  </template>
+                </span>
+                <div class="button-shine"></div>
+              </button>
             </div>
-
-            <button
-              type="submit"
-              class="submit-button"
-              :class="{ glow: formValid }"
-              :disabled="!formValid || isLoading"
-            >
-              <span class="button-content">
-                <template v-if="isLoading">
-                  <i class="fas fa-spinner fa-spin"></i>
-                  Chargement...
-                </template>
-                <template v-else>
-                  Se connecter
-                  <i class="fas fa-arrow-right button-icon"></i>
-                </template>
-              </span>
-              <div class="button-shine"></div>
-            </button>
           </form>
 
           <div class="toggle-mode">
@@ -234,7 +220,7 @@ const login = (user: User): void => {
   // Sauvegarder l'utilisateur dans localStorage
   localStorage.setItem('currentUser', JSON.stringify(user))
   localStorage.setItem('authToken', 'mock-jwt-token')
-  
+
   // Mettre à jour les données partagées pour le DashboardLayout
   updateSharedUserData(user)
 }
@@ -245,7 +231,7 @@ const updateSharedUserData = (user: User): void => {
     detail: { user }
   })
   window.dispatchEvent(userUpdateEvent)
-  
+
   // Stocker aussi dans sessionStorage pour un accès immédiat
   sessionStorage.setItem('currentUserData', JSON.stringify(user))
 }
