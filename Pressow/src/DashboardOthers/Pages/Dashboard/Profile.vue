@@ -1078,8 +1078,8 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import DashboardLayout from '@/DashboardGeneral/Components/DashboardLayout.vue'
-import MapPicker from '@/DashboardGeneral/Components/MapPicker.vue'
+import DashboardLayout from '@/DashboardOthers/Components/DashboardLayout.vue'
+import MapPicker from '@/DashboardOthers/Components/MapPicker.vue'
 
 // État de l'onglet actif
 const activeTab = ref('personal')
@@ -1384,7 +1384,7 @@ const initializeData = () => {
     // Utiliser le serviceType réel de l'utilisateur pour la boutique par défaut
     const userServiceType = user.value.serviceType || 'pressing-linge'
 
-    // 🔧 CORRECTION PRINCIPALE : Stocker les boutiques par utilisateur avec l'ID
+    // CORRECTION: Stocker les boutiques par utilisateur avec l'ID
     const savedShops = localStorage.getItem(`userShops_${user.value.id}`)
     if (savedShops) {
         userShops.value = JSON.parse(savedShops)
@@ -1456,8 +1456,7 @@ const saveUserToStorage = () => {
 }
 
 const saveShopsToStorage = () => {
-    // 🔧 CORRECTION : Sauvegarder les boutiques par utilisateur
-    localStorage.setItem(`userShops_${user.value.id}`, JSON.stringify(userShops.value))
+    localStorage.setItem('userShops', JSON.stringify(userShops.value))
 }
 
 const getServiceTypeLabel = (type) => {
@@ -1595,7 +1594,7 @@ const submitKycVerification = () => {
         kycVerificationStatus.value = 'Vérifié'
         saveUserToStorage()
 
-        showAlert('Votre compte a été vérifié avec succès. Vous pouvez maintenant créer des boutiques supplémentaires et ajouter des prestations.', 'success', 'Validation réussie')
+        showAlert('Votre compte a été vérifié avec succès. Vous pouvez maintenant créer des boutiques supplémentaires et ajouter des prestations.', 'success', "Validation réussie")
     }, 10000)
 }
 
@@ -1606,7 +1605,7 @@ const attemptCreateShop = () => {
     }
 
     if (!user.value.isVerified) {
-        showAlert("Vous devez vérifier votre compte (KYC) pour créer des boutiques supplémentaires. Rendez-vous dans l'onglet 'Informations personnelles.", 'warning', 'Vérification KYC requise')
+        showAlert("Vous devez vérifier votre compte (KYC) pour créer des boutiques supplémentaires. Rendez-vous dans l'onglet 'Informations personnelles.", 'warning', "Vérification KYC requise")
         return
     }
 
@@ -1615,7 +1614,7 @@ const attemptCreateShop = () => {
 
 const attemptAddPrestation = () => {
     if (!user.value.isVerified && activeShop.value && activeShop.value.prestations.length >= 1) {
-        showAlert("Vous devez vérifier votre compte (KYC) pour ajouter des prestations supplémentaires. Rendez-vous dans l'onglet 'Informations personnelles.", 'warning', 'Vérification KYC requise')
+        showAlert("Vous devez vérifier votre compte (KYC) pour ajouter des prestations supplémentaires. Rendez-vous dans l'onglet 'Informations personnelles.", 'warning', "Vérification KYC requise")
         return
     }
 
@@ -1906,12 +1905,12 @@ const resetForm = () => {
 }
 
 const isValidEmail = (email) => {
-    if (!email) return false
+    if (!email) return false; // Changé de true à false pour plus de cohérence
     
     // Regex améliorée pour les emails
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}$/
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     
-    return emailRegex.test(email.trim())
+    return emailRegex.test(email.trim()); // trim() pour ignorer les espaces
 }
 
 const exportProfileData = () => {
@@ -1933,4 +1932,4 @@ const exportProfileData = () => {
 }
 </script>
 
-<style scoped src="@/DashboardGeneral/Assets/Styles/Profile.css"></style>
+<style scoped src="@/DashboardOthers/Assets/Styles/Profile.css"></style>

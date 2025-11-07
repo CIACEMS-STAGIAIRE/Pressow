@@ -443,6 +443,21 @@ const passwordsMatch = computed(() => {
 // FONCTIONS D'AUTHENTIFICATION
 // ====================================================================
 
+const redirectBasedOnService = (serviceType: string): void => {
+  // Services qui doivent aller vers DashboardOthers
+  const otherServices = ['fanico', 'nettoyage']
+  
+  if (otherServices.includes(serviceType)) {
+    setTimeout(() => {
+      router.push('/DashboardOthers')
+    }, 1500)
+  } else {
+    setTimeout(() => {
+      router.push('/Dashboard')
+    }, 1500)
+  }
+}
+
 const login = (user: User): void => {
   // Sauvegarder l'utilisateur dans localStorage
   localStorage.setItem('currentUser', JSON.stringify(user))
@@ -450,6 +465,9 @@ const login = (user: User): void => {
 
   // Mettre à jour les données partagées pour le DashboardLayout
   updateSharedUserData(user)
+  
+  // Redirection basée sur le type de service
+  redirectBasedOnService(user.serviceType)
 }
 
 const updateSharedUserData = (user: User): void => {
@@ -533,10 +551,6 @@ const verifyOtp = async (): Promise<void> => {
     showOtpModal.value = false
     showReopenOtpButton.value = false
     resetOtp()
-
-    setTimeout(() => {
-      router.push('/Dashboard')
-    }, 1500)
   } catch (error) {
     showNotification('error', 'Erreur', 'Une erreur est survenue lors de l\'inscription.')
   } finally {
@@ -811,4 +825,4 @@ onUnmounted(() => {
 })
 </script>
 
-<style src="@/DashboardGeneral/Assets/Styles/Authentification.css"></style>
+<style src="@/Auth/Authentification.css"></style>

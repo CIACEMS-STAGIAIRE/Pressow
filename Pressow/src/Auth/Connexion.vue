@@ -216,6 +216,21 @@ const removeNotification = (notification: Notification): void => {
 // FONCTIONS D'AUTHENTIFICATION
 // ====================================================================
 
+const redirectBasedOnService = (serviceType: string): void => {
+  // Services qui doivent aller vers DashboardOthers
+  const otherServices = ['fanico', 'nettoyage']
+  
+  if (otherServices.includes(serviceType)) {
+    setTimeout(() => {
+      router.push('/DashboardOthers')
+    }, 1500)
+  } else {
+    setTimeout(() => {
+      router.push('/Dashboard')
+    }, 1500)
+  }
+}
+
 const login = (user: User): void => {
   // Sauvegarder l'utilisateur dans localStorage
   localStorage.setItem('currentUser', JSON.stringify(user))
@@ -223,6 +238,9 @@ const login = (user: User): void => {
 
   // Mettre à jour les données partagées pour le DashboardLayout
   updateSharedUserData(user)
+  
+  // Redirection basée sur le type de service
+  redirectBasedOnService(user.serviceType)
 }
 
 const updateSharedUserData = (user: User): void => {
@@ -303,10 +321,6 @@ const handleSubmit = async (): Promise<void> => {
     if (user) {
       login(user)
       showNotification('success', 'Connexion réussie', 'Vous allez être redirigé vers votre Dashboard...')
-
-      setTimeout(() => {
-        router.push('/Dashboard')
-      }, 1500)
     } else {
       showNotification('error', 'Échec de connexion', 'Email/téléphone ou mot de passe incorrect')
     }
@@ -358,4 +372,4 @@ onMounted(() => {
 })
 </script>
 
-<style scoped src="@/DashboardGeneral/Assets/Styles/Authentification.css"></style>
+<style scoped src="@/Auth/Authentification.css"></style>

@@ -402,7 +402,7 @@ const stats = ref([
 const navigateToAuth = (mode: string) => {
   // Stocker le mode dans le localStorage pour la page d'authentification
   localStorage.setItem('authMode', mode)
-  router.push('/AuthPage')
+  router.push('/connexion')
 }
 
 // Animation pour les compteurs
@@ -479,4 +479,4 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped src="@/DashboardGeneral/Assets/Styles/Accueil.css"></style>
+<style scoped src="@/Accueil/Accueil.css"></style>
