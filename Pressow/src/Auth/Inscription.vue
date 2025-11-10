@@ -124,16 +124,40 @@
                 </div>
               </div>
 
+              <!-- CHAMP VILLE MODIFIÉ : Input text avec suggestions -->
               <div class="form-group fade-in">
                 <label for="city" class="form-label">Ville</label>
-                <div class="select-wrapper">
+                <div class="input-wrapper">
                   <i class="fas fa-map-marker-alt input-icon"></i>
-                  <select id="city" v-model="formData.city" required class="form-select">
-                    <option value="" disabled>Sélectionnez votre ville</option>
-                    <option v-for="city in cities" :key="city.name" :value="city.name">
-                      {{ city.name }}
-                    </option>
-                  </select>
+                  <input 
+                    id="city" 
+                    name="city" 
+                    v-model="formData.city" 
+                    @input="onCityInput"
+                    @focus="showCitySuggestions = true"
+                    @blur="onCityBlur"
+                    placeholder="Commencez à taper le nom de votre ville..."
+                    required 
+                    class="form-input" 
+                    list="citySuggestions"
+                    autocomplete="off"
+                  />
+                  <!-- Liste des suggestions -->
+                  <div v-if="showCitySuggestions && filteredCities.length > 0" class="city-suggestions">
+                    <div 
+                      v-for="city in filteredCities" 
+                      :key="city.name"
+                      @mousedown="selectCity(city.name)"
+                      class="suggestion-item"
+                    >
+                      <i class="fas fa-map-marker-alt suggestion-icon"></i>
+                      <span class="suggestion-text">{{ city.name }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="input-hint">
+                  <i class="fas fa-info-circle"></i>
+                  Sélectionnez une ville dans la liste ou tapez le nom de votre ville
                 </div>
               </div>
             </div>
@@ -157,7 +181,7 @@
           </form>
 
           <div class="toggle-mode">
-            <button @click="$router.push('/connexion')" class="toggle-button">
+            <button @click="navigateToLogin" class="toggle-button">
               <span class="toggle-text">
                 Déjà un compte ? Se connecter
               </span>
@@ -367,6 +391,21 @@ const cities: City[] = [
   { name: 'Agboville' },
   { name: 'Dabou' },
   { name: 'Adzopé' },
+  { name: 'Bondoukou' },
+  { name: 'Man' },
+  { name: 'Oumé' },
+  { name: 'Sinfra' },
+  { name: 'Katiola' },
+  { name: 'Ferkessédougou' },
+  { name: 'Odienné' },
+  { name: 'Séguéla' },
+  { name: 'Toumodi' },
+  { name: 'Tiassalé' },
+  { name: 'Akoupé' },
+  { name: 'Alépé' },
+  { name: 'Issia' },
+  { name: 'Duékoué' },
+  { name: 'Guiglo' },
 ]
 
 const serviceTypes: ServiceType[] = [
@@ -403,6 +442,10 @@ const isLoading = ref(false)
 const showOtpModal = ref(false)
 const showReopenOtpButton = ref(false)
 
+// États pour les suggestions de ville
+const showCitySuggestions = ref(false)
+const citySearchTerm = ref('')
+
 // États OTP
 const otpCode = ref('')
 const otpTimer = ref(60)
@@ -437,6 +480,18 @@ const formValid = computed(() => {
 
 const passwordsMatch = computed(() => {
   return formData.value.password === formData.value.confirmPassword
+})
+
+// NOUVEAU : Filtrage des villes basé sur la recherche
+const filteredCities = computed(() => {
+  if (!citySearchTerm.value) {
+    return cities.slice(0, 8) // Afficher les 8 premières villes par défaut
+  }
+  
+  const searchTerm = citySearchTerm.value.toLowerCase()
+  return cities
+    .filter(city => city.name.toLowerCase().includes(searchTerm))
+    .slice(0, 10) // Limiter à 10 résultats
 })
 
 // ====================================================================
@@ -531,6 +586,22 @@ const startOtpTimer = (): void => {
   }, 1000)
 }
 
+// NOUVELLE FONCTION : Initialiser toutes les données par défaut
+const initializeDefaultData = (): void => {
+  // Initialiser les services par défaut
+  const defaultServices = getDefaultServices()
+  localStorage.setItem('presso_services', JSON.stringify(defaultServices))
+
+  // Initialiser les commandes par défaut
+  const defaultOrders = getDefaultOrders()
+  localStorage.setItem('presso_orders', JSON.stringify(defaultOrders))
+
+  console.log('✅ Données initialisées :', {
+    services: defaultServices.length,
+    orders: defaultOrders.length
+  })
+}
+
 const verifyOtp = async (): Promise<void> => {
   if (otpCode.value !== generatedOtp.value) {
     showNotification('error', 'Code invalide', 'Le code OTP saisi est incorrect. Veuillez réessayer.')
@@ -544,6 +615,10 @@ const verifyOtp = async (): Promise<void> => {
   try {
     const newUser = createUser()
     saveUser(newUser)
+    
+    // NOUVEAU : Initialiser toutes les données par défaut AVANT la connexion
+    initializeDefaultData()
+    
     login(newUser)
 
     showNotification('success', 'Inscription réussie', 'Bienvenue parmi nous ! Redirection vers votre Dashboard...')
@@ -693,6 +768,283 @@ const userExists = (): boolean => {
 }
 
 // ====================================================================
+// FONCTIONS POUR LES DONNÉES PAR DÉFAUT (COPIÉES DE COMMANDES.VUE)
+// ====================================================================
+
+const getDefaultServices = () => {
+  return [
+    {
+      id: 'SRV001',
+      name: 'Nettoyage à sec',
+      category: 'pressing',
+      price: 12.0,
+      duration: '48h',
+      description: 'Nettoyage professionnel à sec pour tous types de vêtements',
+      active: true,
+    },
+    {
+      id: 'SRV002',
+      name: 'Repassage',
+      category: 'pressing',
+      price: 8.0,
+      duration: '24h',
+      description: 'Repassage soigné et professionnel',
+      active: true,
+    },
+    {
+      id: 'SRV003',
+      name: 'Lavage et repassage',
+      category: 'laverie',
+      price: 15.0,
+      duration: '48h',
+      description: 'Service complet de lavage et repassage',
+      active: true,
+    },
+  ]
+}
+
+const getDefaultOrders = () => {
+  const getTodayDate = (): string => {
+    const today = new Date()
+    return today.toISOString().split('T')[0]!
+  }
+
+  const getFutureDate = (daysToAdd: number): string => {
+    const date = new Date()
+    date.setDate(date.getDate() + daysToAdd)
+    return date.toISOString().split('T')[0]!
+  }
+
+  const today = getTodayDate()
+  
+  return [
+    {
+      id: 'CMD001',
+      serviceType: 'SRV001',
+      items: ['Chemise blanche', 'Pantalon costume', 'Robe de soirée'],
+      itemsWithQuantities: [
+        { name: 'Chemise blanche', quantity: 2, price: 8.0 },
+        { name: 'Pantalon costume', quantity: 1, price: 12.0 },
+        { name: 'Robe de soirée', quantity: 1, price: 25.0 },
+      ],
+      totalItems: 4,
+      address: '25 Avenue des Champs, Paris 75008',
+      deliveryDate: getFutureDate(2),
+      deliveryTime: '14:00-16:00',
+      price: 45.0,
+      status: 'pending',
+      createdAt: `${today}T10:30:00`,
+      specialInstructions: 'Urgent - Évènement important',
+      customer: {
+        name: 'Jean Dupont',
+        phone: '+33 6 12 34 56 78'
+      }
+    },
+    {
+      id: 'CMD002',
+      serviceType: 'SRV002',
+      items: ['Costume 2 pièces', 'Cravate'],
+      itemsWithQuantities: [
+        { name: 'Costume 2 pièces', quantity: 1, price: 30.0 },
+        { name: 'Cravate', quantity: 2, price: 5.0 }
+      ],
+      totalItems: 3,
+      address: '10 Boulevard Saint-Germain, Paris 75005',
+      deliveryDate: getFutureDate(1),
+      deliveryTime: '16:00-18:00',
+      price: 40.0,
+      status: 'accepted',
+      createdAt: `${today}T14:20:00`,
+      specialInstructions: 'Repassage soigné',
+      customer: {
+        name: 'Marie Martin',
+        phone: '+33 6 98 76 54 32'
+      },
+      statusHistory: [
+        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T15:00:00` }
+      ]
+    },
+    {
+      id: 'CMD003',
+      serviceType: 'SRV003',
+      items: ['Linge de maison'],
+      itemsWithQuantities: [
+        { name: 'Linge de maison', quantity: 8, price: 7.5 }
+      ],
+      totalItems: 8,
+      address: '5 Rue Victor Hugo, Paris 75016',
+      deliveryDate: getFutureDate(3),
+      price: 60.0,
+      status: 'completed',
+      createdAt: `${today}T09:15:00`,
+      customer: {
+        name: 'Pierre Lambert',
+        phone: '+33 6 45 67 89 01'
+      },
+      statusHistory: [
+        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T10:00:00` },
+        { status: 'completed', label: 'Commande terminée', timestamp: `${today}T16:00:00` }
+      ]
+    },
+    {
+      id: 'CMD004',
+      serviceType: 'SRV001',
+      items: ['Veste en cuir', 'Pull en laine'],
+      itemsWithQuantities: [
+        { name: 'Veste en cuir', quantity: 1, price: 25.0 },
+        { name: 'Pull en laine', quantity: 3, price: 15.0 }
+      ],
+      totalItems: 4,
+      address: '15 Rue de Rivoli, Paris 75004',
+      deliveryDate: getFutureDate(4),
+      requestedDate: getFutureDate(1),
+      requestedTime: '11:00-13:00',
+      price: 70.0,
+      status: 'refused',
+      createdAt: `${today}T11:00:00`,
+      refusalReason: 'Service non disponible pour les articles en cuir',
+      refusedAt: `${today}T14:30:00`,
+      customer: {
+        name: 'Sophie Bernard',
+        phone: '+33 6 23 45 67 89'
+      }
+    },
+    {
+      id: 'CMD005',
+      serviceType: 'SRV002',
+      items: ['Chemisier soie', 'Jupe lin'],
+      itemsWithQuantities: [
+        { name: 'Chemisier soie', quantity: 2, price: 18.0 },
+        { name: 'Jupe lin', quantity: 1, price: 22.0 }
+      ],
+      totalItems: 3,
+      address: '8 Avenue Montaigne, Paris 75008',
+      deliveryDate: getFutureDate(2),
+      deliveryTime: '09:00-11:00',
+      price: 58.0,
+      status: 'pending',
+      createdAt: `${today}T16:45:00`,
+      specialInstructions: 'Attention aux tissus délicats',
+      customer: {
+        name: 'Claire Dubois',
+        phone: '+33 6 34 56 78 90'
+      }
+    },
+    {
+      id: 'CMD006',
+      serviceType: 'SRV003',
+      items: ['Couettes', 'Draps', 'Taies d\'oreiller'],
+      itemsWithQuantities: [
+        { name: 'Couettes', quantity: 2, price: 35.0 },
+        { name: 'Draps', quantity: 4, price: 12.0 },
+        { name: 'Taies d\'oreiller', quantity: 8, price: 6.0 }
+      ],
+      totalItems: 14,
+      address: '22 Rue du Faubourg Saint-Honoré, Paris 75008',
+      deliveryDate: getFutureDate(5),
+      price: 150.0,
+      status: 'accepted',
+      createdAt: `${today}T13:20:00`,
+      customer: {
+        name: 'Hôtel Plaza',
+        phone: '+33 1 42 68 90 12'
+      },
+      statusHistory: [
+        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T14:00:00` }
+      ]
+    },
+    {
+      id: 'CMD007',
+      serviceType: 'SRV001',
+      items: ['Costume trois pièces', 'Chemise blanche'],
+      itemsWithQuantities: [
+        { name: 'Costume trois pièces', quantity: 1, price: 45.0 },
+        { name: 'Chemise blanche', quantity: 3, price: 9.0 }
+      ],
+      totalItems: 4,
+      address: '3 Place de la Concorde, Paris 75008',
+      deliveryDate: getFutureDate(3),
+      deliveryTime: '17:00-19:00',
+      price: 72.0,
+      status: 'completed',
+      createdAt: `${today}T08:30:00`,
+      customer: {
+        name: 'Thomas Moreau',
+        phone: '+33 6 78 90 12 34'
+      },
+      statusHistory: [
+        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T09:15:00` },
+        { status: 'completed', label: 'Commande terminée', timestamp: `${today}T16:45:00` }
+      ]
+    },
+    {
+      id: 'CMD008',
+      serviceType: 'SRV002',
+      items: ['Robe de mariée'],
+      itemsWithQuantities: [
+        { name: 'Robe de mariée', quantity: 1, price: 120.0 }
+      ],
+      totalItems: 1,
+      address: '45 Avenue George V, Paris 75008',
+      deliveryDate: getFutureDate(7),
+      price: 120.0,
+      status: 'pending',
+      createdAt: `${today}T15:10:00`,
+      specialInstructions: 'TRÈS URGENT - Mariée samedi prochain',
+      customer: {
+        name: 'Élodie Petit',
+        phone: '+33 6 91 23 45 67'
+      }
+    },
+    {
+      id: 'CMD009',
+      serviceType: 'SRV003',
+      items: ['Serviettes de bain', 'Nappes'],
+      itemsWithQuantities: [
+        { name: 'Serviettes de bain', quantity: 12, price: 8.0 },
+        { name: 'Nappes', quantity: 6, price: 15.0 }
+      ],
+      totalItems: 18,
+      address: '18 Rue de la Paix, Paris 75002',
+      deliveryDate: getFutureDate(4),
+      price: 186.0,
+      status: 'accepted',
+      createdAt: `${today}T11:45:00`,
+      customer: {
+        name: 'Restaurant Le Gourmet',
+        phone: '+33 1 40 20 30 40'
+      },
+      statusHistory: [
+        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T12:30:00` }
+      ]
+    }
+  ]
+}
+
+// ====================================================================
+// GESTION DU CHAMP VILLE AVEC SUGGESTIONS
+// ====================================================================
+
+const onCityInput = (event: Event): void => {
+  const target = event.target as HTMLInputElement
+  citySearchTerm.value = target.value
+  showCitySuggestions.value = true
+}
+
+const onCityBlur = (): void => {
+  // Utiliser setTimeout pour permettre le clic sur les suggestions
+  setTimeout(() => {
+    showCitySuggestions.value = false
+  }, 200)
+}
+
+const selectCity = (cityName: string): void => {
+  formData.value.city = cityName
+  citySearchTerm.value = cityName
+  showCitySuggestions.value = false
+}
+
+// ====================================================================
 // GESTION DU FORMULAIRE
 // ====================================================================
 
@@ -751,6 +1103,12 @@ const toggleConfirmPasswordVisibility = (): void => {
 
 const goBack = (): void => {
   router.push('/')
+}
+
+// NOUVELLE FONCTION : Navigation vers login avec stockage du mode
+const navigateToLogin = (): void => {
+  localStorage.setItem('authMode', 'login')
+  router.push('/connexion')
 }
 
 const handleOverlayClick = (event: MouseEvent): void => {
@@ -825,4 +1183,4 @@ onUnmounted(() => {
 })
 </script>
 
-<style src="@/Auth/Authentification.css"></style>
+<style scoped src="@/Auth/Authentification.css"></style>

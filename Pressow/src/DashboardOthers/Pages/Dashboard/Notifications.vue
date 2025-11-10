@@ -200,12 +200,40 @@
   </DashboardLayout>
 </template>
 
-<script setup>
+<script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import DashboardLayout from '@/DashboardOthers/Components/DashboardLayout.vue'
 
 const router = useRouter()
+
+// Interface pour les notifications
+interface NotificationAction {
+  type: string
+  label: string
+  icon: string
+}
+
+interface NotificationMeta {
+  orderId?: string
+  service?: string
+  amount?: number
+  customer?: string
+  address?: string
+  price?: number
+}
+
+interface Notification {
+  id: string
+  type: string
+  title: string
+  message: string
+  timestamp: string
+  read: boolean
+  priority: 'low' | 'medium' | 'high'
+  meta?: NotificationMeta
+  actions?: NotificationAction[]
+}
 
 // Types de notifications basés sur l'analyse des fichiers
 const NOTIFICATION_TYPES = {
@@ -226,9 +254,9 @@ const NOTIFICATION_TYPES = {
 }
 
 // Données réactives
-const notifications = ref([])
-const selectedNotification = ref(null)
-const activeFilter = ref('all')
+const notifications = ref<Notification[]>([])
+const selectedNotification = ref<Notification | null>(null)
+const activeFilter = ref<string>('all')
 
 // Filtres disponibles
 const notificationFilters = [
@@ -261,19 +289,25 @@ const filteredNotifications = computed(() => {
   }
   
   // Trier par date (plus récent en premier)
-  return filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+  return filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 })
 
 // Méthodes
-const setActiveFilter = (filter) => {
+const setActiveFilter = (filter: string) => {
   activeFilter.value = filter
 }
 
-const markAsRead = (notificationId) => {
+const markAsRead = (notificationId: string) => {
   const notification = notifications.value.find(n => n.id === notificationId)
   if (notification) {
     notification.read = true
     saveNotifications()
+    // Émettre un événement pour informer DashboardLayout
+    window.dispatchEvent(new CustomEvent('notificationStatusChanged', {
+      detail: { notificationId, read: true }
+    }))
+    // Émettre un événement de mise à jour générale
+    window.dispatchEvent(new CustomEvent('notificationsUpdated'))
   }
 }
 
@@ -282,21 +316,27 @@ const markAllAsRead = () => {
     notification.read = true
   })
   saveNotifications()
+  // Émettre un événement pour informer DashboardLayout
+  window.dispatchEvent(new CustomEvent('notificationsUpdated'))
 }
 
-const deleteNotification = (notificationId) => {
+const deleteNotification = (notificationId: string) => {
   notifications.value = notifications.value.filter(n => n.id !== notificationId)
   saveNotifications()
+  // Émettre un événement pour informer DashboardLayout
+  window.dispatchEvent(new CustomEvent('notificationsUpdated'))
 }
 
 const clearAllNotifications = () => {
   if (confirm('Êtes-vous sûr de vouloir supprimer toutes les notifications ?')) {
     notifications.value = []
     saveNotifications()
+    // Émettre un événement pour informer DashboardLayout
+    window.dispatchEvent(new CustomEvent('notificationsUpdated'))
   }
 }
 
-const handleNotificationClick = (notification) => {
+const handleNotificationClick = (notification: Notification) => {
   selectedNotification.value = notification
   if (!notification.read) {
     markAsRead(notification.id)
@@ -307,7 +347,7 @@ const closeNotificationModal = () => {
   selectedNotification.value = null
 }
 
-const handleAction = (notification, action) => {
+const handleAction = (notification: Notification, action: NotificationAction) => {
   // Marquer comme lu si ce n'est pas déjà fait
   if (!notification.read) {
     markAsRead(notification.id)
@@ -317,18 +357,25 @@ const handleAction = (notification, action) => {
   switch (action.type) {
     case 'view_order':
       if (notification.meta?.orderId) {
-        router.push('/Commandes')
+        router.push('/CommandesOthers')
       }
       break
     case 'view_services':
-      router.push('/Services')
+      router.push('/ServicesOthers')
       break
     case 'view_statistics':
-      router.push('/Statistics')
+      router.push('/StatisticsOthers')
       break
     case 'accept_order':
       // Logique pour accepter la commande
       console.log('Accepter la commande:', notification.meta?.orderId)
+      // Émettre un événement pour mettre à jour les commandes
+      window.dispatchEvent(new CustomEvent('orderStatusChanged', {
+        detail: { 
+          orderId: notification.meta?.orderId, 
+          newStatus: 'accepted' 
+        }
+      }))
       break
     case 'dismiss':
       // Simple fermeture
@@ -339,7 +386,7 @@ const handleAction = (notification, action) => {
 }
 
 // Utilitaires d'affichage
-const getNotificationIcon = (type) => {
+const getNotificationIcon = (type: string) => {
   const icons = {
     [NOTIFICATION_TYPES.ORDER_NEW]: 'fas fa-plus-circle',
     [NOTIFICATION_TYPES.ORDER_ACCEPTED]: 'fas fa-check-circle',
@@ -359,7 +406,7 @@ const getNotificationIcon = (type) => {
   return icons[type] || 'fas fa-bell'
 }
 
-const getNotificationIconClass = (type) => {
+const getNotificationIconClass = (type: string) => {
   const classes = {
     [NOTIFICATION_TYPES.ORDER_NEW]: 'icon-blue',
     [NOTIFICATION_TYPES.ORDER_ACCEPTED]: 'icon-green',
@@ -379,8 +426,8 @@ const getNotificationIconClass = (type) => {
   return classes[type] || 'icon-blue'
 }
 
-const getPriorityBadgeClass = (priority) => {
-  const classes = {
+const getPriorityBadgeClass = (priority: string) => {
+  const classes: Record<string, string> = {
     low: 'badge-gray',
     medium: 'badge-blue',
     high: 'badge-red'
@@ -388,8 +435,8 @@ const getPriorityBadgeClass = (priority) => {
   return classes[priority] || 'badge-gray'
 }
 
-const getPriorityIcon = (priority) => {
-  const icons = {
+const getPriorityIcon = (priority: string) => {
+  const icons: Record<string, string> = {
     low: 'fas fa-arrow-down',
     medium: 'fas fa-minus',
     high: 'fas fa-arrow-up'
@@ -397,8 +444,8 @@ const getPriorityIcon = (priority) => {
   return icons[priority] || 'fas fa-minus'
 }
 
-const getPriorityLabel = (priority) => {
-  const labels = {
+const getPriorityLabel = (priority: string) => {
+  const labels: Record<string, string> = {
     low: 'Basse',
     medium: 'Moyenne',
     high: 'Haute'
@@ -406,17 +453,17 @@ const getPriorityLabel = (priority) => {
   return labels[priority] || 'Moyenne'
 }
 
-const formatCurrency = (amount) => {
+const formatCurrency = (amount: number | string) => {
   if (typeof amount === 'number') {
     return amount.toFixed(2) + ' €'
   }
   return amount + ' €'
 }
 
-const formatTimeAgo = (timestamp) => {
+const formatTimeAgo = (timestamp: string) => {
   const now = new Date()
   const date = new Date(timestamp)
-  const diffInSeconds = Math.floor((now - date) / 1000)
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
   
   if (diffInSeconds < 60) return 'À l\'instant'
   if (diffInSeconds < 3600) return `Il y a ${Math.floor(diffInSeconds / 60)} min`
@@ -426,12 +473,12 @@ const formatTimeAgo = (timestamp) => {
   return formatDate(timestamp)
 }
 
-const formatDate = (dateString) => {
+const formatDate = (dateString: string) => {
   const date = new Date(dateString)
   return date.toLocaleDateString('fr-FR')
 }
 
-const formatDateTime = (dateString) => {
+const formatDateTime = (dateString: string) => {
   const date = new Date(dateString)
   return date.toLocaleString('fr-FR')
 }
@@ -455,7 +502,7 @@ const loadNotifications = () => {
   }
 }
 
-const getDefaultNotifications = () => {
+const getDefaultNotifications = (): Notification[] => {
   return [
     {
       id: '1',
@@ -543,6 +590,9 @@ const getDefaultNotifications = () => {
 // Lifecycle
 onMounted(() => {
   loadNotifications()
+  
+  // NE PAS démarrer d'intervalle ici - la simulation est gérée globalement par DashboardLayout
+  console.log('Page Notifications chargée - simulation gérée globalement')
 })
 </script>
 

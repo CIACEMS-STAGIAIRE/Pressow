@@ -30,12 +30,8 @@
                 <p class="setting-description">{{ item.description }}</p>
               </div>
               <div class="toggle-container">
-                <input 
-                  type="checkbox" 
-                  :id="`notification-${item.key}`"
-                  v-model="settings.notifications.types[item.key]"
-                  class="toggle-input"
-                >
+                <input type="checkbox" :id="`notification-${item.key}`" v-model="settings.notifications.types[item.key]"
+                  class="toggle-input">
                 <label :for="`notification-${item.key}`" class="toggle-label">
                   <span class="toggle-slider"></span>
                 </label>
@@ -52,12 +48,8 @@
                 <p class="setting-description">{{ channel.description }}</p>
               </div>
               <div class="toggle-container">
-                <input 
-                  type="checkbox" 
-                  :id="`channel-${channel.key}`"
-                  v-model="settings.notifications.channels[channel.key]"
-                  class="toggle-input"
-                >
+                <input type="checkbox" :id="`channel-${channel.key}`"
+                  v-model="settings.notifications.channels[channel.key]" class="toggle-input">
                 <label :for="`channel-${channel.key}`" class="toggle-label">
                   <span class="toggle-slider"></span>
                 </label>
@@ -68,22 +60,20 @@
           <!-- Fréquence des notifications -->
           <div class="settings-section">
             <h3 class="section-title">Fréquence des rappels pour commandes en attente</h3>
-            <p class="section-description">Choisissez à quelle fréquence vous souhaitez recevoir des rappels pour les commandes en attente</p>
+            <p class="section-description">Choisissez à quelle fréquence vous souhaitez recevoir des rappels pour les
+              commandes en attente</p>
             <div class="form-group">
               <label class="form-label">Fréquence des rappels</label>
               <div class="radio-group">
                 <label v-for="option in frequencyOptions" :key="option.value" class="radio-label">
-                  <input
-                    type="radio"
-                    :value="option.value"
-                    v-model="settings.notifications.frequency"
-                    class="radio-input"
-                  />
+                  <input type="radio" :value="option.value" v-model="settings.notifications.frequency"
+                    class="radio-input" />
                   <span class="radio-custom"></span>
                   <span class="radio-text">{{ option.label }}</span>
                 </label>
               </div>
-              <p class="helper-text">Par défaut: Quotidiennement. Vous pouvez personnaliser la fréquence selon vos préférences.</p>
+              <p class="helper-text">Par défaut: Quotidiennement. Vous pouvez personnaliser la fréquence selon vos
+                préférences.</p>
             </div>
           </div>
         </div>
@@ -110,12 +100,7 @@
               <p class="setting-description">Accepter automatiquement les commandes sans validation manuelle</p>
             </div>
             <div class="toggle-container">
-              <input 
-                type="checkbox" 
-                id="auto-accept"
-                v-model="settings.availability.autoAccept"
-                class="toggle-input"
-              >
+              <input type="checkbox" id="auto-accept" v-model="settings.availability.autoAccept" class="toggle-input">
               <label for="auto-accept" class="toggle-label">
                 <span class="toggle-slider"></span>
               </label>
@@ -128,12 +113,7 @@
               <p class="setting-description">Mettre temporairement votre compte en pause</p>
             </div>
             <div class="toggle-container">
-              <input 
-                type="checkbox" 
-                id="pause-mode"
-                v-model="settings.availability.pauseMode"
-                class="toggle-input"
-              >
+              <input type="checkbox" id="pause-mode" v-model="settings.availability.pauseMode" class="toggle-input">
               <label for="pause-mode" class="toggle-label">
                 <span class="toggle-slider"></span>
               </label>
@@ -144,28 +124,21 @@
             <label class="form-label">Nombre maximum de commandes par jour</label>
             <div class="input-with-toggle">
               <div class="toggle-buttons-group">
-                <button
-                  v-for="option in maxOrderOptions"
-                  :key="option.value"
-                  :class="['toggle-button', { active: settings.availability.maxOrdersPerDay === option.value }]"
-                  @click="updateMaxOrders(option.value)"
-                  type="button"
-                >
+                <button v-for="option in maxOrderOptions" :key="option.value"
+                  :class="['toggle-buttons', { active: settings.availability.maxOrdersPerDay === option.value }]"
+                  @click="updateMaxOrders(option.value)" type="button">
                   {{ option.label }}
                 </button>
               </div>
               <div class="custom-input-container">
-                <input
-                  type="number"
-                  v-model="customMaxOrders"
-                  placeholder="Nombre personnalisé"
-                  class="custom-input"
-                  min="1"
-                  max="100"
-                  @blur="updateCustomMaxOrders"
-                  @keyup.enter="updateCustomMaxOrders"
-                />
+                <input type="number" v-model="customMaxOrders" placeholder="Nombre personnalisé" class="custom-input"
+                  min="1" max="100" @blur="updateCustomMaxOrders" @keyup.enter="updateCustomMaxOrders"
+                  :class="{ 'input-validated': isMaxOrdersValidated }" />
                 <span class="input-suffix">commandes/jour</span>
+                <button class="validate-btn" @click="validateMaxOrders"
+                  :disabled="!customMaxOrders || parseInt(customMaxOrders) < 1">
+                  Valider
+                </button>
               </div>
             </div>
           </div>
@@ -176,20 +149,12 @@
             <div class="time-range-group">
               <div class="time-input-container">
                 <label class="time-label">Début</label>
-                <input
-                  type="time"
-                  v-model="settings.availability.workHours.weekdays.start"
-                  class="time-input"
-                />
+                <input type="time" v-model="settings.availability.workHours.weekdays.start" class="time-input" />
               </div>
               <span class="time-separator">à</span>
               <div class="time-input-container">
                 <label class="time-label">Fin</label>
-                <input
-                  type="time"
-                  v-model="settings.availability.workHours.weekdays.end"
-                  class="time-input"
-                />
+                <input type="time" v-model="settings.availability.workHours.weekdays.end" class="time-input" />
               </div>
             </div>
           </div>
@@ -200,20 +165,12 @@
             <div class="time-range-group">
               <div class="time-input-container">
                 <label class="time-label">Début</label>
-                <input
-                  type="time"
-                  v-model="settings.availability.workHours.weekends.start"
-                  class="time-input"
-                />
+                <input type="time" v-model="settings.availability.workHours.weekends.start" class="time-input" />
               </div>
               <span class="time-separator">à</span>
               <div class="time-input-container">
                 <label class="time-label">Fin</label>
-                <input
-                  type="time"
-                  v-model="settings.availability.workHours.weekends.end"
-                  class="time-input"
-                />
+                <input type="time" v-model="settings.availability.workHours.weekends.end" class="time-input" />
               </div>
             </div>
           </div>
@@ -222,12 +179,9 @@
             <label class="form-label">Jours de travail</label>
             <div class="days-two-columns">
               <div class="days-column">
-                <div
-                  v-for="day in leftColumnDays"
-                  :key="day.value"
+                <div v-for="day in leftColumnDays" :key="day.value"
                   :class="['day-toggle-item', { active: settings.availability.workingDays.includes(day.value) }]"
-                  @click="toggleWorkingDay(day.value)"
-                >
+                  @click="toggleWorkingDay(day.value)">
                   <div class="day-toggle-switch">
                     <div class="day-toggle-slider"></div>
                   </div>
@@ -235,12 +189,9 @@
                 </div>
               </div>
               <div class="days-column">
-                <div
-                  v-for="day in rightColumnDays"
-                  :key="day.value"
+                <div v-for="day in rightColumnDays" :key="day.value"
                   :class="['day-toggle-item', { active: settings.availability.workingDays.includes(day.value) }]"
-                  @click="toggleWorkingDay(day.value)"
-                >
+                  @click="toggleWorkingDay(day.value)">
                   <div class="day-toggle-switch">
                     <div class="day-toggle-slider"></div>
                   </div>
@@ -273,12 +224,7 @@
               <p class="setting-description">Sécurisez votre compte avec une double vérification</p>
             </div>
             <div class="toggle-container">
-              <input 
-                type="checkbox" 
-                id="twoFactor"
-                v-model="settings.security.twoFactorAuth"
-                class="toggle-input"
-              >
+              <input type="checkbox" id="twoFactor" v-model="settings.security.twoFactorAuth" class="toggle-input">
               <label for="twoFactor" class="toggle-label">
                 <span class="toggle-slider"></span>
               </label>
@@ -291,12 +237,7 @@
               <p class="setting-description">Être alerté en cas de nouvelle connexion</p>
             </div>
             <div class="toggle-container">
-              <input 
-                type="checkbox" 
-                id="login-alerts"
-                v-model="settings.security.loginAlerts"
-                class="toggle-input"
-              >
+              <input type="checkbox" id="login-alerts" v-model="settings.security.loginAlerts" class="toggle-input">
               <label for="login-alerts" class="toggle-label">
                 <span class="toggle-slider"></span>
               </label>
@@ -308,70 +249,6 @@
               <strong>Note:</strong> La modification du mot de passe se fait dans l'onglet Profil.
               Pour toute autre question de sécurité, veuillez contacter le support.
             </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Frais de livraison -->
-      <div v-if="visibleSections.deliveryFees" class="settings-card">
-        <div class="settings-header">
-          <div class="settings-title">
-            <span class="title-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M1 3h15v13H1zM16 8h5l3 3v5h-8V8z" />
-                <circle cx="5.5" cy="18.5" r="2.5" />
-                <circle cx="18.5" cy="18.5" r="2.5" />
-              </svg>
-            </span>
-            Frais de Livraison
-          </div>
-          <p class="card-description">Définissez vos frais de livraison par zone</p>
-        </div>
-        <div class="settings-content">
-          <div class="form-group">
-            <label class="form-label">Ville / Commune de votre boutique</label>
-            <div class="input-with-suffix">
-              <select v-model="currentShopCity" class="financial-input" disabled>
-                <option>{{ currentShopCity }}</option>
-              </select>
-              <span class="input-suffix">Défini lors de l'inscription</span>
-            </div>
-            <p class="helper-text">La ville est définie lors de la création de la boutique</p>
-          </div>
-
-          <div class="form-group">
-            <div class="delivery-fees-header">
-              <label class="form-label">Zones de livraison et tarifs</label>
-              <button type="button" class="add-zone-btn" @click="showAddDeliveryZoneModal = true">
-                <i class="fas fa-plus"></i>
-                Ajouter une zone
-              </button>
-            </div>
-            
-            <div class="delivery-zones-list">
-              <div v-if="deliveryFees.length === 0" class="empty-zones">
-                <i class="fas fa-map-marked-alt"></i>
-                <p>Aucune zone de livraison configurée</p>
-                <button type="button" class="primary-btn-small" @click="showAddDeliveryZoneModal = true">
-                  Ajouter votre première zone
-                </button>
-              </div>
-              
-              <div v-else class="zones-grid">
-                <div v-for="fee in deliveryFees" :key="fee.id" class="zone-card">
-                  <div class="zone-info">
-                    <div class="zone-name">
-                      <i class="fas fa-map-pin"></i>
-                      {{ fee.toCommune }}
-                    </div>
-                    <div class="zone-fee">{{ fee.fee }} FCFA</div>
-                  </div>
-                  <button type="button" class="zone-delete" @click="removeDeliveryZone(fee.id)">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -394,39 +271,18 @@
         <div class="settings-content">
           <div class="form-group">
             <label class="form-label">Montant minimum de commande</label>
-            <div class="input-with-suffix">
-              <input
-                type="number"
-                v-model.number="settings.financial.minOrderAmount"
-                min="0"
-                class="financial-input"
-              />
-              <span class="input-suffix">FCFA</span>
+            <div class="financial-input-with-validation">
+              <div class="custom-input-container">
+                <input type="number" v-model.number="minOrderAmountInput" min="0" class="financial-input"
+                  :class="{ 'input-validated': isMinOrderAmountValidated }" placeholder="Entrez le montant minimum" />
+                <span class="input-suffix">FCFA</span>
+              </div>
+              <button class="validate-btn" @click="validateMinOrderAmount"
+                :disabled="!minOrderAmountInput || minOrderAmountInput < 0">
+                Valider
+              </button>
             </div>
             <p class="helper-text">Montant minimum requis pour accepter une commande</p>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Méthodes de paiement acceptées</label>
-            <div class="payment-methods-grid">
-              <div
-                v-for="method in paymentMethods"
-                :key="method.key"
-                :class="['payment-method-item', { active: settings.financial.paymentMethods[method.key] }]"
-                @click="togglePaymentMethod(method.key)"
-              >
-                <div class="payment-method-icon">
-                  <img v-if="method.icon" :src="method.icon" :alt="method.label" class="payment-icon-img" />
-                  <div v-else class="payment-icon-fallback">{{ method.fallbackIcon }}</div>
-                </div>
-                <span class="payment-method-label">{{ method.label }}</span>
-                <div class="payment-method-check">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -442,32 +298,6 @@
           Enregistrer tous les paramètres
         </button>
       </div>
-
-      <!-- Modal pour ajouter une zone de livraison -->
-      <div v-if="showAddDeliveryZoneModal" class="modal-overlay" @click="showAddDeliveryZoneModal = false">
-        <div class="modern-modal" @click.stop>
-          <div class="modal-header">
-            <h3 class="modal-title">Ajouter une zone de livraison</h3>
-            <button class="modal-close" @click="showAddDeliveryZoneModal = false">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-          <div class="modal-content">
-            <div class="form-field">
-              <label>Commune / Quartier de destination</label>
-              <input v-model="newDeliveryZone.commune" placeholder="Ex: Cocody, Marcory, Yopougon..." />
-            </div>
-            <div class="form-field">
-              <label>Frais de livraison (FCFA)</label>
-              <input v-model.number="newDeliveryZone.fee" type="number" min="0" placeholder="Ex: 1000" />
-            </div>
-          </div>
-          <div class="modal-actions">
-            <button class="BtnGlobal2" @click="showAddDeliveryZoneModal = false">Annuler</button>
-            <button class="BtnGlobal2" @click="addDeliveryZone">Ajouter</button>
-          </div>
-        </div>
-      </div>
     </div>
   </DashboardLayout>
 </template>
@@ -480,16 +310,6 @@ import { useAuth } from '@/DashboardOthers/Components/UseAuth'
 // Types
 type NotificationTypeKey = 'newOrders' | 'orderUpdates' | 'payments' | 'promotions' | 'reminders'
 type NotificationChannelKey = 'email' | 'sms' | 'push'
-type PaymentMethodKey = 'orange_money' | 'moov_money' | 'mtn_money' | 'wave' | 'cash' | 'bank_transfer'
-
-interface DeliveryFee {
-  id: string
-  shopId: string
-  fromCommune: string
-  toCommune: string
-  fee: number
-  city: string
-}
 
 // Reactive data
 const settings = ref({
@@ -529,26 +349,17 @@ const settings = ref({
     loginAlerts: true
   },
   financial: {
-    minOrderAmount: 2000,
-    paymentMethods: {
-      orange_money: true,
-      moov_money: true,
-      mtn_money: true,
-      wave: true,
-      cash: true,
-      bank_transfer: false
-    }
+    minOrderAmount: 2000
   }
 })
 
 const customMaxOrders = ref('')
-const showAddDeliveryZoneModal = ref(false)
-const deliveryFees = ref<DeliveryFee[]>([])
-const newDeliveryZone = ref({ commune: '', fee: 0 })
+const minOrderAmountInput = ref(2000)
+const isMaxOrdersValidated = ref(false)
+const isMinOrderAmountValidated = ref(false)
 
 // Auth et permissions
 const { isManager, activeShop } = useAuth()
-const currentShopCity = computed(() => activeShop.value?.city || 'Abidjan')
 
 // Sections visibles selon rôle
 const visibleSections = computed(() => {
@@ -557,17 +368,15 @@ const visibleSections = computed(() => {
       notifications: false,
       availability: false,
       security: false,
-      financial: false,
-      deliveryFees: true,
+      financial: false
     }
   }
-  
+
   return {
     notifications: true,
     availability: true,
     security: true,
-    financial: true,
-    deliveryFees: true,
+    financial: true
   }
 })
 
@@ -635,45 +444,6 @@ const daysOfWeek = [
   { value: 'sunday', label: 'Dimanche' },
 ]
 
-const paymentMethods = [
-  { 
-    key: 'orange_money' as PaymentMethodKey, 
-    label: 'Orange Money', 
-    icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTOGvevFkT-gPnGlgXcKPmSkOJWzNolIXXhWA&s',
-    fallbackIcon: '🟠'
-  },
-  { 
-    key: 'moov_money' as PaymentMethodKey, 
-    label: 'Moov Money', 
-    icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTO90yUKP5HlFWwUQp2iqCEDYMSns8aabJDwQ&s',
-    fallbackIcon: '🔵'
-  },
-  { 
-    key: 'mtn_money' as PaymentMethodKey, 
-    label: 'MTN Money', 
-    icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTdG3TuXmWFO5c9IYS5R77veFJQb7yt9gnaOw&s',
-    fallbackIcon: '🟡'
-  },
-  { 
-    key: 'wave' as PaymentMethodKey, 
-    label: 'Wave', 
-    icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSyG7P_ElGLq8IRKmG8cFSWBMkAeSZFxafnyg&s',
-    fallbackIcon: '🌊'
-  },
-  { 
-    key: 'cash' as PaymentMethodKey, 
-    label: 'Espèces', 
-    icon: null,
-    fallbackIcon: '💵'
-  },
-  { 
-    key: 'bank_transfer' as PaymentMethodKey, 
-    label: 'Virement bancaire', 
-    icon: null,
-    fallbackIcon: '🏦'
-  },
-]
-
 const maxOrderOptions = [
   { value: '5', label: '5' },
   { value: '10', label: '10' },
@@ -712,42 +482,40 @@ const toggleWorkingDay = (day: string) => {
   }
 }
 
-const togglePaymentMethod = (method: PaymentMethodKey) => {
-  settings.value.financial.paymentMethods[method] = !settings.value.financial.paymentMethods[method]
-}
-
 const updateMaxOrders = (value: string) => {
   settings.value.availability.maxOrdersPerDay = value
   if (value !== 'unlimited') {
     customMaxOrders.value = value
+    isMaxOrdersValidated.value = true
   } else {
     customMaxOrders.value = ''
+    isMaxOrdersValidated.value = false
   }
 }
 
 const updateCustomMaxOrders = () => {
   if (customMaxOrders.value && parseInt(customMaxOrders.value) > 0) {
     settings.value.availability.maxOrdersPerDay = customMaxOrders.value
+    isMaxOrdersValidated.value = true
   }
 }
 
-const addDeliveryZone = () => {
-  if (newDeliveryZone.value.commune.trim() && newDeliveryZone.value.fee > 0) {
-    deliveryFees.value.push({
-      id: Date.now().toString(),
-      shopId: activeShop.value?.id || 'shop_1',
-      fromCommune: currentShopCity.value,
-      toCommune: newDeliveryZone.value.commune.trim(),
-      fee: newDeliveryZone.value.fee,
-      city: currentShopCity.value,
-    })
-    newDeliveryZone.value = { commune: '', fee: 0 }
-    showAddDeliveryZoneModal.value = false
+const validateMaxOrders = () => {
+  if (customMaxOrders.value && parseInt(customMaxOrders.value) > 0) {
+    settings.value.availability.maxOrdersPerDay = customMaxOrders.value
+    isMaxOrdersValidated.value = true
+    // Feedback visuel
+    console.log('Nombre maximum de commandes validé:', customMaxOrders.value)
   }
 }
 
-const removeDeliveryZone = (id: string) => {
-  deliveryFees.value = deliveryFees.value.filter(f => f.id !== id)
+const validateMinOrderAmount = () => {
+  if (minOrderAmountInput.value >= 0) {
+    settings.value.financial.minOrderAmount = minOrderAmountInput.value
+    isMinOrderAmountValidated.value = true
+    // Feedback visuel
+    console.log('Montant minimum validé:', minOrderAmountInput.value)
+  }
 }
 
 const saveSettings = async () => {
@@ -760,11 +528,10 @@ const saveSettings = async () => {
 
     // Sauvegarde des paramètres
     console.log('Paramètres enregistrés avec succès!', settings.value)
-    console.log('Frais de livraison:', deliveryFees.value)
-    
+
     // Simulation d'une sauvegarde API
     // await api.saveSettings(settings.value)
-    
+
     alert('Paramètres enregistrés avec succès!')
   } catch (error) {
     console.error('Erreur lors de la sauvegarde:', error)
@@ -776,15 +543,22 @@ const saveSettings = async () => {
 watch(() => settings.value.availability.maxOrdersPerDay, (newValue) => {
   if (!maxOrderOptions.some(option => option.value === newValue) && newValue !== 'unlimited') {
     customMaxOrders.value = newValue
+    isMaxOrdersValidated.value = true
   } else {
     customMaxOrders.value = ''
+    isMaxOrdersValidated.value = false
   }
 })
+
+// Initialisation
+watch(() => settings.value.financial.minOrderAmount, (newValue) => {
+  minOrderAmountInput.value = newValue
+  isMinOrderAmountValidated.value = true
+}, { immediate: true })
 
 // Lifecycle
 onMounted(() => {
   // Charger les données existantes
-  // deliveryFees.value = await api.getDeliveryFees()
 })
 </script>
 

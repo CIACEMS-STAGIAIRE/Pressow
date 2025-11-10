@@ -32,126 +32,86 @@
             <div class="tab-content">
                 <!-- Onglet Informations personnelles -->
                 <div v-if="activeTab === 'personal'" class="tab-panel">
-                    <div class="tab-grid">
+                    <!-- Carte profil -->
+                    <div class="profile-card card">
+                        <div class="card-content">
+                            <div class="profile-avatar-section">
+                                <div class="avatar-container">
+                                    <div class="avatar-large">
+                                        <img v-if="profilePhoto" :src="profilePhoto" alt="Photo de profil"
+                                            style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
+                                        <span v-else>{{ userInitials }}</span>
+                                    </div>
+                                    <div class="avatar-actions">
+                                        <button type="button" class="icon-btn" @click="openAvatarUpload"
+                                            title="Changer la photo">
+                                            <i class="fas fa-camera"></i>
+                                        </button>
+                                        <input type="file" ref="avatarInput" @change="handleAvatarUpload"
+                                            accept="image/*" class="hidden-file-input" />
+                                    </div>
+                                </div>
+                                <div class="profile-info">
+                                    <h2 class="user-name">{{ fullName }}</h2>
+                                    <p class="user-email">{{ user.email }}</p>
+                                    <div class="profile-badges">
+                                        <!-- Badge de vérification KYC -->
+                                        <span v-if="user.isVerified" class="badge badge-success">
+                                            <i class="fas fa-check-circle"></i>
+                                            Vérifié
+                                        </span>
+                                        <span v-else-if="user.statut_kyc === 'pending'" class="badge badge-warning">
+                                            <i class="fas fa-clock"></i>
+                                            Vérification en cours
+                                        </span>
+                                        <span v-else class="badge badge-secondary">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                            Non vérifié
+                                        </span>
+
+                                        <!-- Badge de prestation principale -->
+                                        <span v-if="user.serviceType" class="badge badge-primary">
+                                            <i class="fas fa-star"></i>
+                                            {{ getServiceTypeLabel(user.serviceType) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="profile-stats">
+                                <div v-if="user.isVerified" class="stat-item">
+                                    <!-- Message KYC vérifié -->
+                                    <div class="form-card kyc-verified-card">
+                                        <div>
+                                            <div class="kyc-verified-message">
+                                                <i class="fas fa-check-circle"></i>
+                                                <div>
+                                                    <h3>Compte vérifié avec succès.</h3>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ userStats.totalOrders }}</div>
+                                    <div class="stat-label">Commandes totales</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ userStats.successRate }}%</div>
+                                    <div class="stat-label">Taux de réussite</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ userStats.responseTime }}min</div>
+                                    <div class="stat-label">Temps de réponse</div>
+                                </div>
+                                
+                            </div>
+                        </div>
+                    </div>
+
+                    <div :class="user.isVerified ? '' : 'tab-grid'">
                         <!-- Colonne gauche -->
                         <div class="tab-column">
-                            <!-- Carte profil -->
-                            <div class="profile-card card">
-                                <div class="card-content">
-                                    <div class="profile-avatar-section">
-                                        <div class="avatar-container">
-                                            <div class="avatar-large">
-                                                <img v-if="profilePhoto" :src="profilePhoto" alt="Photo de profil"
-                                                    style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
-                                                <span v-else>{{ userInitials }}</span>
-                                            </div>
-                                            <div class="avatar-actions">
-                                                <button type="button" class="icon-btn" @click="openAvatarUpload"
-                                                    title="Changer la photo">
-                                                    <i class="fas fa-camera"></i>
-                                                </button>
-                                                <input type="file" ref="avatarInput" @change="handleAvatarUpload"
-                                                    accept="image/*" class="hidden-file-input" />
-                                            </div>
-                                        </div>
-                                        <div class="profile-info">
-                                            <h2 class="user-name">{{ fullName }}</h2>
-                                            <p class="user-email">{{ user.email }}</p>
-                                            <div class="profile-badges">
-                                                <!-- Badge de vérification KYC -->
-                                                <span v-if="user.isVerified" class="badge badge-success">
-                                                    <i class="fas fa-check-circle"></i>
-                                                    Vérifié
-                                                </span>
-                                                <span v-else-if="user.statut_kyc === 'pending'"
-                                                    class="badge badge-warning">
-                                                    <i class="fas fa-clock"></i>
-                                                    Vérification en cours
-                                                </span>
-                                                <span v-else class="badge badge-secondary">
-                                                    <i class="fas fa-exclamation-circle"></i>
-                                                    Non vérifié
-                                                </span>
-
-                                                <!-- Badge de prestation principale -->
-                                                <span v-if="activeShop && activeShop.mainPrestation"
-                                                    class="badge badge-primary">
-                                                    <i class="fas fa-star"></i>
-                                                    {{ getServiceTypeLabel(activeShop.mainPrestation) }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="profile-stats">
-                                        <div class="stat-item">
-                                            <div class="stat-value">{{ userStats.totalOrders }}</div>
-                                            <div class="stat-label">Commandes totales</div>
-                                        </div>
-                                        <div class="stat-item">
-                                            <div class="stat-value">{{ userStats.successRate }}%</div>
-                                            <div class="stat-label">Taux de réussite</div>
-                                        </div>
-                                        <div class="stat-item">
-                                            <div class="stat-value">{{ userStats.responseTime }}min</div>
-                                            <div class="stat-label">Temps de réponse</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Informations du compte -->
-                            <div class="info-card card">
-                                <div class="card-header">
-                                    <div class="card-title">
-                                        <i class="fas fa-info-circle"></i>
-                                        Informations du compte
-                                    </div>
-                                </div>
-                                <div class="card-content">
-                                    <div class="info-list">
-                                        <div class="info-item">
-                                            <div class="info-icon">
-                                                <i class="fas fa-calendar-alt"></i>
-                                            </div>
-                                            <div class="info-content">
-                                                <span class="info-label">Date d'inscription</span>
-                                                <span class="info-value">{{ formatDate(user.date_inscription) }}</span>
-                                            </div>
-                                        </div>
-                                        <div class="info-item">
-                                            <div class="info-icon">
-                                                <i class="fas fa-id-card"></i>
-                                            </div>
-                                            <div class="info-content">
-                                                <span class="info-label">Identifiant</span>
-                                                <span class="info-value">{{ user.id }}</span>
-                                            </div>
-                                        </div>
-                                        <div class="info-item">
-                                            <div class="info-icon">
-                                                <i class="fas fa-map-marker-alt"></i>
-                                            </div>
-                                            <div class="info-content">
-                                                <span class="info-label">Ville</span>
-                                                <span class="info-value">{{ user.city || 'Non spécifiée' }}</span>
-                                            </div>
-                                        </div>
-                                        <div class="info-item">
-                                            <div class="info-icon">
-                                                <i class="fas fa-shield-alt"></i>
-                                            </div>
-                                            <div class="info-content">
-                                                <span class="info-label">Statut KYC</span>
-                                                <span :class="['info-value', getKycStatusClass(user.statut_kyc)]">
-                                                    {{ getKycStatusLabel(user.statut_kyc) }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
                             <!-- Section KYC UTILISATEUR (pour boutiques supplémentaires et prestations) -->
                             <div v-if="!user.isVerified" class="form-card card kyc-card">
                                 <div class="card-header">
@@ -168,7 +128,7 @@
                                             <h4>Pourquoi vérifier votre compte ?</h4>
                                             <p>La vérification KYC est nécessaire pour créer des boutiques
                                                 supplémentaires et ajouter des prestations en plus de votre prestation
-                                                principale.</p>
+                                                principale et pour être visible sur l'application.</p>
                                         </div>
                                     </div>
 
@@ -271,22 +231,8 @@
                                             <button type="button" class="primar-btn"
                                                 :disabled="!canSubmitKyc || isVerifying" @click="submitKycVerification">
                                                 <i class="fas fa-check-circle"></i>
-                                                {{ isVerifying ? 'Vérification en cours...' : 'Soumettre pour vérification' }}
+                                                {{ isVerifying ? 'Vérification en cours...' : 'Soumettre pour vérification'}}
                                             </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Message KYC vérifié -->
-                            <div v-else class="form-card card kyc-verified-card">
-                                <div class="card-content">
-                                    <div class="kyc-verified-message">
-                                        <i class="fas fa-check-circle"></i>
-                                        <div>
-                                            <h3>Compte vérifié</h3>
-                                            <p>Votre compte a été vérifié avec succès. Vous pouvez maintenant créer des
-                                                boutiques supplémentaires et ajouter des prestations.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -294,7 +240,8 @@
                         </div>
 
                         <!-- Colonne droite -->
-                        <div class="tab-column">
+                        <!-- Informations personnelles -->
+                        <div :class="user.isVerified ? 'tab-columnVerified' : 'tab-column'">
                             <!-- Formulaire informations personnelles -->
                             <div class="form-card card">
                                 <div class="card-header">
@@ -367,22 +314,31 @@
                                             </div>
                                         </div>
 
-                                        <!-- VILLE GRISÉE -->
+                                        <!-- CHAMP VILLE AVEC SUGGESTIONS COMME INSCRIPTION.VUE -->
                                         <div class="form-field">
                                             <label for="city">
                                                 Ville
                                             </label>
-                                            <div class="select-with-icon">
-                                                <select id="city" v-model="profileForm.city" disabled
-                                                    class="disabled-select">
-                                                    <option value="">Sélectionnez une ville</option>
-                                                    <option v-for="city in cityNames" :key="city" :value="city">{{
-                                                        city }}</option>
-                                                </select>
-                                                <i class="select-icon fas fa-lock"></i>
+                                            <div class="input-wrapper">
+                                                <i class="fas fa-map-marker-alt input-icon"></i>
+                                                <input id="city" name="city" v-model="profileForm.city"
+                                                    @input="onCityInput" @focus="showCitySuggestions = true"
+                                                    @blur="onCityBlur"
+                                                    placeholder="Commencez à taper le nom de votre ville..." required
+                                                    class="form-input" autocomplete="off" />
+                                                <!-- Liste des suggestions -->
+                                                <div v-if="showCitySuggestions && filteredCities.length > 0"
+                                                    class="city-suggestions">
+                                                    <div v-for="city in filteredCities" :key="city.name"
+                                                        @mousedown="selectCity(city.name)" class="suggestion-item">
+                                                        <i class="fas fa-map-marker-alt suggestion-icon"></i>
+                                                        <span class="suggestion-text">{{ city.name }}</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="field-hint">
-                                                La ville est définie lors de l'inscription et ne peut pas être modifiée
+                                            <div class="input-hint">
+                                                <i class="fas fa-info-circle"></i>
+                                                Sélectionnez une ville dans la liste ou tapez le nom de votre ville
                                             </div>
                                         </div>
 
@@ -400,12 +356,64 @@
                                     </form>
                                 </div>
                             </div>
+
+                            <!-- Informations du compte -->
+                            <div class="info-card card">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <i class="fas fa-info-circle"></i>
+                                        Informations du compte
+                                    </div>
+                                </div>
+                                <div class="card-content">
+                                    <div class="info-list">
+                                        <div class="info-item">
+                                            <div class="info-icon">
+                                                <i class="fas fa-calendar-alt"></i>
+                                            </div>
+                                            <div class="info-content">
+                                                <span class="info-label">Date d'inscription</span>
+                                                <span class="info-value">{{ formatDate(user.date_inscription) }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-icon">
+                                                <i class="fas fa-id-card"></i>
+                                            </div>
+                                            <div class="info-content">
+                                                <span class="info-label">Identifiant</span>
+                                                <span class="info-value">{{ user.id }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-icon">
+                                                <i class="fas fa-map-marker-alt"></i>
+                                            </div>
+                                            <div class="info-content">
+                                                <span class="info-label">Ville</span>
+                                                <span class="info-value">{{ user.city || 'Non spécifiée' }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-icon">
+                                                <i class="fas fa-shield-alt"></i>
+                                            </div>
+                                            <div class="info-content">
+                                                <span class="info-label">Statut KYC</span>
+                                                <span :class="['info-value', getKycStatusClass(user.statut_kyc)]">
+                                                    {{ getKycStatusLabel(user.statut_kyc) }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Onglet Entreprise -->
-                <div v-if="activeTab === 'business'" class="tab-panel">
+                <!-- Onglet Entreprise - ACCESSIBLE UNIQUEMENT POUR NETTOYAGE -->
+                <div v-if="activeTab === 'business' && user.serviceType === 'nettoyage'" class="tab-panel">
                     <div class="tab-grid">
                         <div class="tab-column-full">
                             <!-- Sélecteur de boutique -->
@@ -571,23 +579,33 @@
                                                     </div>
                                                 </div>
 
-                                                <!-- VILLE GRISÉE POUR LA BOUTIQUE APRÈS CRÉATION -->
+                                                <!-- CHAMP VILLE AVEC SUGGESTIONS POUR LA BOUTIQUE -->
                                                 <div class="form-field">
                                                     <label for="shopCity">
                                                         Ville
                                                     </label>
-                                                    <div class="select-with-icon">
-                                                        <select id="shopCity" v-model="activeShop.city" required
-                                                            disabled class="disabled-select">
-                                                            <option value="">Sélectionnez une ville</option>
-                                                            <option v-for="city in cityNames" :key="city" :value="city">
-                                                                {{ city }}</option>
-                                                        </select>
-                                                        <i class="select-icon fas fa-lock"></i>
+                                                    <div class="input-wrapper">
+                                                        <i class="fas fa-map-marker-alt input-icon"></i>
+                                                        <input id="shopCity" name="shopCity" v-model="activeShop.city"
+                                                            @input="onShopCityInput"
+                                                            @focus="showShopCitySuggestions = true"
+                                                            @blur="onShopCityBlur"
+                                                            placeholder="Commencez à taper le nom de votre ville..."
+                                                            required class="form-input" autocomplete="off" />
+                                                        <!-- Liste des suggestions -->
+                                                        <div v-if="showShopCitySuggestions && filteredShopCities.length > 0"
+                                                            class="city-suggestions">
+                                                            <div v-for="city in filteredShopCities" :key="city.name"
+                                                                @mousedown="selectShopCity(city.name)"
+                                                                class="suggestion-item">
+                                                                <i class="fas fa-map-marker-alt suggestion-icon"></i>
+                                                                <span class="suggestion-text">{{ city.name }}</span>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div class="field-hint">
-                                                        La ville ne peut pas être modifiée après la création de la
-                                                        boutique
+                                                    <div class="input-hint">
+                                                        <i class="fas fa-info-circle"></i>
+                                                        Saisissez ou sélectionnez la ville où se trouve votre boutique
                                                     </div>
                                                 </div>
                                             </div>
@@ -622,7 +640,8 @@
                                                     Adresse complète
                                                 </label>
                                                 <div class="input-with-icon">
-                                                    <textarea id="address" v-model="activeShop.mainAddress"required></textarea>
+                                                    <textarea id="address" v-model="activeShop.mainAddress"
+                                                        required></textarea>
                                                     <i class="input-icon textarea-icon fas fa-map-marker-alt"></i>
                                                 </div>
                                             </div>
@@ -705,6 +724,149 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        <div class="form-actions">
+                                            <button type="button" class="secondary-btn" @click="resetForm"
+                                                :disabled="isSubmitting">
+                                                Annuler
+                                            </button>
+                                            <button type="submit" class="primar-btn" :disabled="isSubmitting">
+                                                <i class="fas fa-save"></i>
+                                                {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer les modifications'
+                                                }}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message pour autres services que nettoyage -->
+                <div v-if="activeTab === 'business' && user.serviceType !== 'nettoyage'" class="tab-panel">
+                    <div class="tab-grid">
+                        <div class="tab-column-full">
+                            <div class="form-card card">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <i class="fas fa-building"></i>
+                                        Informations de l'entreprise
+                                    </div>
+                                </div>
+                                <div class="card-content">
+                                    <form @submit.prevent="handleUpdateBusiness" class="business-form">
+                                        <div class="form-section">
+                                            <h3 class="section-title">Informations générales</h3>
+                                            <div class="form-row">
+                                                <div class="form-field">
+                                                    <label for="nomCommercial">
+                                                        Nom commercial
+                                                    </label>
+                                                    <div class="input-with-icon">
+                                                        <input id="nomCommercial" v-model="user.serviceName"
+                                                            placeholder="Ex: Fanico Express, Nettoyage Pro..." />
+                                                        <i class="input-icon fas fa-building"></i>
+                                                    </div>
+                                                </div>
+
+                                                <!-- CHAMP VILLE AVEC SUGGESTIONS POUR FANICO/NETTOYAGE -->
+                                                <div class="form-field">
+                                                    <label for="serviceCity">
+                                                        Ville d'opération
+                                                    </label>
+                                                    <div class="input-wrapper">
+                                                        <i class="fas fa-map-marker-alt input-icon"></i>
+                                                        <input id="serviceCity" name="serviceCity" v-model="user.city"
+                                                            @input="onServiceCityInput"
+                                                            @focus="showServiceCitySuggestions = true"
+                                                            @blur="onServiceCityBlur"
+                                                            placeholder="Commencez à taper le nom de votre ville..."
+                                                            required class="form-input" autocomplete="off" />
+                                                        <!-- Liste des suggestions -->
+                                                        <div v-if="showServiceCitySuggestions && filteredServiceCities.length > 0"
+                                                            class="city-suggestions">
+                                                            <div v-for="city in filteredServiceCities" :key="city.name"
+                                                                @mousedown="selectServiceCity(city.name)"
+                                                                class="suggestion-item">
+                                                                <i class="fas fa-map-marker-alt suggestion-icon"></i>
+                                                                <span class="suggestion-text">{{ city.name }}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="input-hint">
+                                                        <i class="fas fa-info-circle"></i>
+                                                        Saisissez ou sélectionnez votre ville principale d'opération
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="form-row">
+                                                <div class="form-field">
+                                                    <label for="zoneCouverture">
+                                                        Zone de couverture
+                                                    </label>
+                                                    <div class="input-with-icon">
+                                                        <textarea id="zoneCouverture" v-model="user.zone_couverture"
+                                                            placeholder="Ex: Cocody, Angré, Riviera..."></textarea>
+                                                        <i class="input-icon fas fa-map"></i>
+                                                    </div>
+                                                </div>
+
+                                                <div class="form-field">
+                                                    <label for="rayonKm">
+                                                        Rayon de couverture (km)
+                                                    </label>
+                                                    <div class="input-with-icon">
+                                                        <input id="rayonKm" type="number" v-model="user.rayon_km"
+                                                            step="0.5" min="1" max="50" />
+                                                        <i class="input-icon fas fa-ruler"></i>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="form-field">
+                                                <label for="address">
+                                                    Adresse de base
+                                                </label>
+                                                <div class="input-with-icon">
+                                                    <textarea id="address" v-model="user.mainAddress"
+                                                        placeholder="Votre adresse principale ou quartier..."></textarea>
+                                                    <i class="input-icon textarea-icon fas fa-map-marker-alt"></i>
+                                                </div>
+                                            </div>
+
+                                            <div class="form-field">
+                                                <label for="serviceDescription">
+                                                    Description du service
+                                                </label>
+                                                <div class="input-with-icon">
+                                                    <textarea id="serviceDescription" v-model="user.description"
+                                                        rows="3"
+                                                        placeholder="Décrivez vos services, vos spécialités, votre expérience..."></textarea>
+                                                    <i class="input-icon textarea-icon fas fa-file-alt"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Section Carte de localisation pour service mobile -->
+                                        <div class="form-section">
+                                            <h3 class="section-title">
+                                                <i class="fas fa-map-marked-alt"></i>
+                                                Zone de couverture
+                                            </h3>
+                                            <div class="location-help">
+                                                <div class="help-text">
+                                                    <i class="fas fa-info-circle"></i>
+                                                    Définissez votre zone d'intervention pour que les clients puissent
+                                                    vous localiser
+                                                </div>
+                                            </div>
+                                            <MapPicker :initialLat="user.location?.lat || 5.3600"
+                                                :initialLng="user.location?.lng || -4.0083"
+                                                :initialAddress="user.mainAddress"
+                                                @update:location="updateUserLocation" />
                                         </div>
 
                                         <div class="form-actions">
@@ -853,19 +1015,30 @@
                                 </div>
                             </div>
 
-                            <!-- VILLE ACTIVE POUR NOUVELLE BOUTIQUE -->
+                            <!-- CHAMP VILLE AVEC SUGGESTIONS POUR NOUVELLE BOUTIQUE -->
                             <div class="form-field">
                                 <label for="newShopCity">
                                     Ville
                                 </label>
-                                <div class="select-with-icon">
-                                    <select id="newShopCity" v-model="newShop.city" required>
-                                        <option value="">Sélectionnez une ville</option>
-                                        <option v-for="city in cityNames" :key="city" :value="city">{{ city }}</option>
-                                    </select>
-                                    <i class="select-icon fas fa-map-marker-alt"></i>
+                                <div class="input-wrapper">
+                                    <i class="fas fa-map-marker-alt input-icon"></i>
+                                    <input id="newShopCity" name="newShopCity" v-model="newShop.city"
+                                        @input="onNewShopCityInput" @focus="showNewShopCitySuggestions = true"
+                                        @blur="onNewShopCityBlur"
+                                        placeholder="Commencez à taper le nom de votre ville..." required
+                                        class="form-input" autocomplete="off" />
+                                    <!-- Liste des suggestions -->
+                                    <div v-if="showNewShopCitySuggestions && filteredNewShopCities.length > 0"
+                                        class="city-suggestions">
+                                        <div v-for="city in filteredNewShopCities" :key="city.name"
+                                            @mousedown="selectNewShopCity(city.name)" class="suggestion-item">
+                                            <i class="fas fa-map-marker-alt suggestion-icon"></i>
+                                            <span class="suggestion-text">{{ city.name }}</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="field-hint">
+                                <div class="input-hint">
+                                    <i class="fas fa-info-circle"></i>
                                     La boutique peut être dans une autre ville que votre compte principal
                                 </div>
                             </div>
@@ -1081,6 +1254,47 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import DashboardLayout from '@/DashboardOthers/Components/DashboardLayout.vue'
 import MapPicker from '@/DashboardOthers/Components/MapPicker.vue'
 
+// ====================================================================
+// DONNÉES STATIQUES - VILLES (identique à Inscription.vue)
+// ====================================================================
+
+const cities = [
+    { name: 'Abidjan' },
+    { name: 'Bouaké' },
+    { name: 'Daloa' },
+    { name: 'Korhogo' },
+    { name: 'San-Pédro' },
+    { name: 'Yamoussoukro' },
+    { name: 'Divo' },
+    { name: 'Gagnoa' },
+    { name: 'Abengourou' },
+    { name: 'Anyama' },
+    { name: 'Grand-Bassam' },
+    { name: 'Bingerville' },
+    { name: 'Agboville' },
+    { name: 'Dabou' },
+    { name: 'Adzopé' },
+    { name: 'Bondoukou' },
+    { name: 'Man' },
+    { name: 'Oumé' },
+    { name: 'Sinfra' },
+    { name: 'Katiola' },
+    { name: 'Ferkessédougou' },
+    { name: 'Odienné' },
+    { name: 'Séguéla' },
+    { name: 'Toumodi' },
+    { name: 'Tiassalé' },
+    { name: 'Akoupé' },
+    { name: 'Alépé' },
+    { name: 'Issia' },
+    { name: 'Duékoué' },
+    { name: 'Guiglo' },
+]
+
+// ====================================================================
+// ÉTATS RÉACTIFS
+// ====================================================================
+
 // État de l'onglet actif
 const activeTab = ref('personal')
 
@@ -1129,7 +1343,157 @@ const cniFrontInput = ref(null)
 const cniBackInput = ref(null)
 const shopPhotosInput = ref(null)
 
-// Fonctions modales
+// ====================================================================
+// ÉTATS POUR LES CHAMPS VILLE AVEC SUGGESTIONS
+// ====================================================================
+
+// Pour le profil utilisateur
+const showCitySuggestions = ref(false)
+const citySearchTerm = ref('')
+
+// Pour la boutique active
+const showShopCitySuggestions = ref(false)
+const shopCitySearchTerm = ref('')
+
+// Pour la nouvelle boutique
+const showNewShopCitySuggestions = ref(false)
+const newShopCitySearchTerm = ref('')
+
+// Pour le service (Fanico/Nettoyage)
+const showServiceCitySuggestions = ref(false)
+const serviceCitySearchTerm = ref('')
+
+// Computed properties pour les villes filtrées
+const filteredCities = computed(() => {
+    if (!citySearchTerm.value) {
+        return cities.slice(0, 8) // Afficher les 8 premières villes par défaut
+    }
+
+    const searchTerm = citySearchTerm.value.toLowerCase()
+    return cities
+        .filter(city => city.name.toLowerCase().includes(searchTerm))
+        .slice(0, 10) // Limiter à 10 résultats
+})
+
+const filteredShopCities = computed(() => {
+    if (!shopCitySearchTerm.value) {
+        return cities.slice(0, 8)
+    }
+
+    const searchTerm = shopCitySearchTerm.value.toLowerCase()
+    return cities
+        .filter(city => city.name.toLowerCase().includes(searchTerm))
+        .slice(0, 10)
+})
+
+const filteredNewShopCities = computed(() => {
+    if (!newShopCitySearchTerm.value) {
+        return cities.slice(0, 8)
+    }
+
+    const searchTerm = newShopCitySearchTerm.value.toLowerCase()
+    return cities
+        .filter(city => city.name.toLowerCase().includes(searchTerm))
+        .slice(0, 10)
+})
+
+const filteredServiceCities = computed(() => {
+    if (!serviceCitySearchTerm.value) {
+        return cities.slice(0, 8)
+    }
+
+    const searchTerm = serviceCitySearchTerm.value.toLowerCase()
+    return cities
+        .filter(city => city.name.toLowerCase().includes(searchTerm))
+        .slice(0, 10)
+})
+
+// ====================================================================
+// MÉTHODES POUR LA GESTION DES CHAMPS VILLE
+// ====================================================================
+
+// Pour le profil utilisateur
+const onCityInput = (event) => {
+    const target = event.target
+    citySearchTerm.value = target.value
+    showCitySuggestions.value = true
+}
+
+const onCityBlur = () => {
+    setTimeout(() => {
+        showCitySuggestions.value = false
+    }, 200)
+}
+
+const selectCity = (cityName) => {
+    profileForm.city = cityName
+    citySearchTerm.value = cityName
+    showCitySuggestions.value = false
+}
+
+// Pour la boutique active
+const onShopCityInput = (event) => {
+    const target = event.target
+    shopCitySearchTerm.value = target.value
+    showShopCitySuggestions.value = true
+}
+
+const onShopCityBlur = () => {
+    setTimeout(() => {
+        showShopCitySuggestions.value = false
+    }, 200)
+}
+
+const selectShopCity = (cityName) => {
+    if (activeShop.value) {
+        activeShop.value.city = cityName
+        shopCitySearchTerm.value = cityName
+        showShopCitySuggestions.value = false
+    }
+}
+
+// Pour la nouvelle boutique
+const onNewShopCityInput = (event) => {
+    const target = event.target
+    newShopCitySearchTerm.value = target.value
+    showNewShopCitySuggestions.value = true
+}
+
+const onNewShopCityBlur = () => {
+    setTimeout(() => {
+        showNewShopCitySuggestions.value = false
+    }, 200)
+}
+
+const selectNewShopCity = (cityName) => {
+    newShop.city = cityName
+    newShopCitySearchTerm.value = cityName
+    showNewShopCitySuggestions.value = false
+}
+
+// Pour le service (Fanico/Nettoyage)
+const onServiceCityInput = (event) => {
+    const target = event.target
+    serviceCitySearchTerm.value = target.value
+    showServiceCitySuggestions.value = true
+}
+
+const onServiceCityBlur = () => {
+    setTimeout(() => {
+        showServiceCitySuggestions.value = false
+    }, 200)
+}
+
+const selectServiceCity = (cityName) => {
+    user.value.city = cityName
+    serviceCitySearchTerm.value = cityName
+    showServiceCitySuggestions.value = false
+}
+
+// ====================================================================
+// FONCTIONS MODALES
+// ====================================================================
+
 const showAlert = (message, type = 'info', title = '') => {
     alertModal.show = true
     alertModal.type = type
@@ -1185,10 +1549,15 @@ const getAlertIcon = (type) => {
     return icons[type] || 'fas fa-info-circle'
 }
 
+// Computed pour déterminer si l'utilisateur est Fanico ou Nettoyage
+const isFanicoOrNettoyage = computed(() => {
+    return user.value.serviceType === 'fanico' || user.value.serviceType === 'nettoyage'
+})
+
 // Fonction pour récupérer l'utilisateur actuel depuis localStorage ou données mock
 const getCurrentUser = () => {
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
-    
+
     // Si l'utilisateur existe dans le localStorage, utiliser ses vraies données
     if (currentUser.id) {
         return {
@@ -1207,7 +1576,14 @@ const getCurrentUser = () => {
                 identityBack: null
             },
             // AJOUT IMPORTANT : Récupérer le type de service réel
-            serviceType: currentUser.serviceType || currentUser.type || ''
+            serviceType: currentUser.serviceType || currentUser.type || '',
+            // Champs supplémentaires pour Fanico/Nettoyage
+            serviceName: currentUser.serviceName || '',
+            zone_couverture: currentUser.zone_couverture || '',
+            rayon_km: currentUser.rayon_km || 5,
+            mainAddress: currentUser.mainAddress || '',
+            description: currentUser.description || '',
+            location: currentUser.location || { lat: 5.3600, lng: -4.0083 }
         }
     }
 
@@ -1227,7 +1603,13 @@ const getCurrentUser = () => {
             identityCard: null,
             identityBack: null
         },
-        serviceType: '' // Laisser vide au lieu d'une valeur par défaut
+        serviceType: '', // Laisser vide au lieu d'une valeur par défaut
+        serviceName: '',
+        zone_couverture: '',
+        rayon_km: 5,
+        mainAddress: '',
+        description: '',
+        location: { lat: 5.3600, lng: -4.0083 }
     }
 }
 
@@ -1273,12 +1655,6 @@ const availablePrestations = ref([
     { id: 'nettoyage', name: 'Service de nettoyage', description: 'Nettoyage professionnel', icon: 'fas fa-broom' },
     { id: 'blanchisserie', name: 'Blanchisserie', description: 'Blanchiment et détachage', icon: 'fas fa-soap' },
     { id: 'laverie', name: 'Laverie', description: 'Service libre-service', icon: 'fas fa-washing-machine' }
-])
-
-// Villes disponibles
-const cityNames = ref([
-    'Abidjan', 'Bouaké', 'Daloa', 'Korhogo', 'San-Pédro', 'Yamoussoukro',
-    'Divo', 'Gagnoa', 'Abengourou', 'Man', 'Anyama', 'Bingerville'
 ])
 
 // Computed properties
@@ -1389,25 +1765,28 @@ const initializeData = () => {
     if (savedShops) {
         userShops.value = JSON.parse(savedShops)
     } else {
-        const defaultShop = {
-            id: 'SHOP_' + Date.now(),
-            name: `${user.value.first_name} ${user.value.last_name}`.trim() || 'Ma Boutique',
-            category: userServiceType, // ← Utiliser le vrai serviceType
-            city: user.value.city || 'Abidjan',
-            mainAddress: '',
-            zone_couverture: '',
-            rayon_km: 5,
-            description: '',
-            location: { lat: 5.3600, lng: -4.0083 },
-            documents: {
-                photos: []
-            },
-            prestations: [userServiceType], // ← Utiliser le vrai serviceType
-            mainPrestation: userServiceType // ← Utiliser le vrai serviceType
-        }
+        // Ne créer une boutique par défaut que si c'est nettoyage
+        if (user.value.serviceType === 'nettoyage') {
+            const defaultShop = {
+                id: 'SHOP_' + Date.now(),
+                name: `${user.value.first_name} ${user.value.last_name}`.trim() || 'Ma Boutique',
+                category: userServiceType, // ← Utiliser le vrai serviceType
+                city: user.value.city || 'Abidjan',
+                mainAddress: '',
+                zone_couverture: '',
+                rayon_km: 5,
+                description: '',
+                location: { lat: 5.3600, lng: -4.0083 },
+                documents: {
+                    photos: []
+                },
+                prestations: [userServiceType], // ← Utiliser le vrai serviceType
+                mainPrestation: userServiceType // ← Utiliser le vrai serviceType
+            }
 
-        userShops.value = [defaultShop]
-        saveShopsToStorage()
+            userShops.value = [defaultShop]
+            saveShopsToStorage()
+        }
     }
 
     loadShopDataIntoForms()
@@ -1648,6 +2027,18 @@ const updateShopLocation = (locationData) => {
     }
 }
 
+// Nouvelle méthode pour mettre à jour la localisation de l'utilisateur (Fanico/Nettoyage)
+const updateUserLocation = (locationData) => {
+    user.value.location = {
+        lat: locationData.lat,
+        lng: locationData.lng
+    }
+    if (locationData.address) {
+        user.value.mainAddress = locationData.address
+    }
+    saveUserToStorage()
+}
+
 const createNewShop = () => {
     if (!isNewShopValid.value) return
 
@@ -1865,7 +2256,15 @@ const handleUpdateBusiness = async () => {
 
     try {
         await new Promise(resolve => setTimeout(resolve, 1000))
-        saveShopsToStorage()
+
+        if (user.serviceType === 'nettoyage') {
+            // Sauvegarder les données boutique pour le service nettoyage
+            saveShopsToStorage()
+        } else {
+            // Sauvegarder les données utilisateur pour les autres services
+            saveUserToStorage()
+        }
+
         showAlert("Paramètres de l'entreprise mis à jour avec succès!", 'success', 'Succès')
     } catch (error) {
         console.error('Erreur lors de la mise à jour:', error)
@@ -1906,10 +2305,10 @@ const resetForm = () => {
 
 const isValidEmail = (email) => {
     if (!email) return false; // Changé de true à false pour plus de cohérence
-    
+
     // Regex améliorée pour les emails
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    
+
     return emailRegex.test(email.trim()); // trim() pour ignorer les espaces
 }
 

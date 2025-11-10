@@ -67,8 +67,8 @@
 /* Masonry Grid */
 .services-masonry {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 15px;
   align-items: start;
 }
 
@@ -778,7 +778,6 @@ input:focus + .toggle-slider {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
-  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
 }

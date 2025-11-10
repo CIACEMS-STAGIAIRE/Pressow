@@ -238,73 +238,6 @@
                             </div>
                         </div>
 
-                        <!-- Planning Section -->
-                        <div v-if="selectedOrder.status !== 'refused'" class="modal-section">
-                            <div class="section-header">
-                                <i class="fas fa-calendar-alt section-icon"></i>
-                                <h3 class="section-title">Planning</h3>
-                            </div>
-                            <div class="planning-content">
-                                <div class="planning-subsection">
-                                    <h4 class="planning-subtitle">
-                                        <i class="fas fa-box-open"></i>
-                                        Dépôt / Ramassage
-                                    </h4>
-                                    <div class="planning-item">
-                                        <i class="fas fa-calendar-day"></i>
-                                        <div class="planning-info">
-                                            <span class="planning-label">Date de ramassage souhaitée</span>
-                                            <span class="planning-value">{{ formatDate(selectedOrder.requestedDate ||
-                                                selectedOrder.createdAt) }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="planning-item">
-                                        <i class="fas fa-clock"></i>
-                                        <div class="planning-info">
-                                            <span class="planning-label">Créneau de ramassage</span>
-                                            <span class="planning-value">{{ selectedOrder.requestedTime || 'Non spécifié' }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="planning-divider"></div>
-
-                                <div class="planning-subsection">
-                                    <h4 class="planning-subtitle">
-                                        <i class="fas fa-shipping-fast"></i>
-                                        Récupération / Livraison
-                                    </h4>
-                                    <div class="planning-item">
-                                        <i class="fas fa-calendar-day"></i>
-                                        <div class="planning-info">
-                                            <span class="planning-label">Date de livraison souhaitée</span>
-                                            <span class="planning-value">{{ formatDate(selectedOrder.deliveryDate)
-                                                }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="planning-item">
-                                        <i class="fas fa-clock"></i>
-                                        <div class="planning-info">
-                                            <span class="planning-label">Créneau de livraison</span>
-                                            <span class="planning-value">{{ selectedOrder.deliveryTime || 'Non spécifié'
-                                                }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Instructions Section -->
-                        <div v-if="selectedOrder.specialInstructions" class="modal-section">
-                            <div class="section-header">
-                                <i class="fas fa-sticky-note section-icon"></i>
-                                <h3 class="section-title">Instructions spéciales</h3>
-                            </div>
-                            <div class="instructions-content">
-                                <p>{{ selectedOrder.specialInstructions }}</p>
-                            </div>
-                        </div>
-
                         <!-- Price Summary -->
                         <div class="modal-section price-section">
                             <div class="section-header">
@@ -319,7 +252,7 @@
                             </div>
                         </div>
 
-                        <!-- Action Buttons -->
+                        <!-- Action Buttons - Nouvelle logique simplifiée -->
                         <div class="modal-actions" v-if="selectedOrder.status === 'pending'">
                             <button @click="acceptOrder(selectedOrder.id)" class="action-btn accept-btn BtnGlobal2">
                                 <i class="fas fa-check"></i>
@@ -331,19 +264,16 @@
                             </button>
                         </div>
 
-                        <!-- Progress Action Buttons for Accepted Orders -->
-                        <div v-if="selectedOrder.status === 'accepted' || selectedOrder.status === 'in_pickup' || selectedOrder.status === 'processing' || selectedOrder.status === 'ready_for_delivery' || selectedOrder.status === 'in_delivery'"
-                            class="modal-actions">
-                            <button @click="progressOrderStatus(selectedOrder)"
-                                class="action-btn accept-btn BtnGlobal2">
-                                <i :class="getProgressButtonIcon(selectedOrder.status)"></i>
-                                {{ getProgressButtonLabel(selectedOrder.status) }}
+                        <!-- Nouvelle logique simplifiée pour les commandes acceptées -->
+                        <div v-if="selectedOrder.status === 'accepted'" class="modal-actions">
+                            <button @click="completeOrder(selectedOrder)" class="action-btn accept-btn BtnGlobal2">
+                                <i class="fas fa-flag-checkered"></i>
+                                Marquer comme terminée
                             </button>
                         </div>
 
-                        <!-- Close button for refused orders -->
-                        <div v-if="selectedOrder.status === 'refused' || selectedOrder.status === 'completed'"
-                            class="modal-actions">
+                        <!-- Close button for completed orders -->
+                        <div v-if="selectedOrder.status === 'completed'" class="modal-actions">
                             <button @click="closeOrderDetails" class="action-btn BtnGlobal2">
                                 <i class="fas fa-times"></i>
                                 Fermer
@@ -432,7 +362,7 @@
                     <div class="modal-header">
                         <div class="header-main">
                             <h2 class="dialog-title">
-                                <i class="fas fa-check-circle title-icon"></i>
+                                <i class="fas fa-check-circle modal-icon"></i>
                                 Succès
                             </h2>
                         </div>
@@ -505,13 +435,13 @@
                                 </div>
                             </div>
 
-                            <!-- Filtres par type de service -->
+                            <!-- Filtres par type de service (dynamiques) -->
                             <div class="filter-group">
                                 <div class="filter-group-header">
                                     <label class="filter-label">Type de service</label>
                                 </div>
                                 <div class="filter-buttons">
-                                    <button class="BtnGlobal2" v-for="service in serviceFilters" :key="service.value"
+                                    <button class="BtnGlobal2" v-for="service in activeServiceFilters" :key="service.value"
                                         :class="filters.serviceType === service.value ? 'active-filter' : ''"
                                         @click="toggleServiceFilter(service.value)">
                                         <i :class="getServiceIcon(service.value)"></i>
@@ -538,25 +468,79 @@
     </DashboardLayout>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import DashboardLayout from '@/DashboardOthers/Components/DashboardLayout.vue'
 
+// Types
+interface ItemWithQuantity {
+  name: string
+  quantity: number
+  price: number
+}
+
+interface Customer {
+  name: string
+  phone: string
+}
+
+interface StatusHistoryItem {
+  status: string
+  label: string
+  timestamp: string
+}
+
+interface Order {
+  id: string
+  serviceType: string
+  items: string[]
+  itemsWithQuantities: ItemWithQuantity[]
+  totalItems: number
+  address: string
+  deliveryDate: string
+  deliveryTime?: string
+  requestedDate?: string
+  requestedTime?: string
+  price: number
+  status: string
+  createdAt: string
+  specialInstructions?: string
+  customer: Customer
+  statusHistory?: StatusHistoryItem[]
+  refusalReason?: string
+  refusedAt?: string
+}
+
+interface Service {
+  id: string
+  name: string
+  category: string
+  price: number
+  duration: string
+  description: string
+  active: boolean
+}
+
 // Données réactives
-const orders = ref([])
-const selectedOrder = ref(null)
-const selectedOrders = ref([])
+const orders = ref<Order[]>([])
+const services = ref<Service[]>([])
+const selectedOrder = ref<Order | null>(null)
+const selectedOrders = ref<string[]>([])
 const showRefusalModal = ref(false)
-const refusalOrder = ref(null)
+const refusalOrder = ref<Order | null>(null)
 const refusalReason = ref('')
 const showFiltersModal = ref(false)
 const isFiltersSticky = ref(false)
-const filtersCard = ref(null)
+const filtersCard = ref<HTMLElement | null>(null)
 
 // Nouveaux états pour les modales
 const showDeleteModal = ref(false)
-const deleteModalData = ref({
-  type: 'single', // 'single' ou 'bulk'
+const deleteModalData = ref<{
+  type: string
+  orderId: string | null
+  count: number
+}>({
+  type: 'single',
   orderId: null,
   count: 0
 })
@@ -574,25 +558,12 @@ const filters = ref({
   quickDateFilter: ''
 })
 
-// Constantes
+// Constantes - Filtres simplifiés (seulement 3 statuts)
 const statusFilters = [
   { value: 'all', label: 'Toutes' },
   { value: 'pending', label: 'En attente' },
   { value: 'accepted', label: 'Acceptées' },
-  { value: 'in_pickup', label: 'Ramassage' },
-  { value: 'processing', label: 'En traitement' },
-  { value: 'ready_for_delivery', label: 'Prêtes à livrer' },
-  { value: 'in_delivery', label: 'En livraison' },
-  { value: 'completed', label: 'Terminées' },
-  { value: 'refused', label: 'Refusées' }
-]
-
-const serviceFilters = [
-  { value: 'all', label: 'Tous les services' },
-  { value: 'dry_cleaning', label: 'Nettoyage à sec' },
-  { value: 'express', label: 'Express' },
-  { value: 'delicate', label: 'Lavage délicat' },
-  { value: 'standard', label: 'Standard' }
+  { value: 'completed', label: 'Terminées' }
 ]
 
 const quickDateFilters = [
@@ -602,7 +573,24 @@ const quickDateFilters = [
   { value: 'last-month', label: 'Mois dernier' }
 ]
 
-// Computed
+// Computed - Filtres de services dynamiques basés sur les services actifs
+const activeServiceFilters = computed(() => {
+  const baseFilters = [
+    { value: 'all', label: 'Tous les services' }
+  ]
+  
+  // Ajouter seulement les services actifs
+  const activeServices = services.value
+    .filter(service => service.active)
+    .map(service => ({
+      value: service.id, // Utiliser l'ID du service comme valeur
+      label: service.name,
+      category: service.category
+    }))
+  
+  return [...baseFilters, ...activeServices]
+})
+
 const activeFiltersCount = computed(() => {
   let count = 0
   if (filters.value.status !== 'all') count++
@@ -615,12 +603,12 @@ const activeFiltersCount = computed(() => {
 const filteredOrders = computed(() => {
   let filtered = orders.value
 
-  // Filtre par statut
+  // Filtre par statut (seulement 3 statuts maintenant)
   if (filters.value.status !== 'all') {
     filtered = filtered.filter(order => order.status === filters.value.status)
   }
 
-  // Filtre par type de service
+  // Filtre par type de service (dynamique basé sur les services actifs)
   if (filters.value.serviceType !== 'all') {
     filtered = filtered.filter(order => order.serviceType === filters.value.serviceType)
   }
@@ -646,11 +634,11 @@ const allSelected = computed(() => {
 
 // Méthodes
 // Filtres
-const toggleStatusFilter = (status) => {
+const toggleStatusFilter = (status: string) => {
   filters.value.status = filters.value.status === status ? 'all' : status
 }
 
-const toggleServiceFilter = (serviceType) => {
+const toggleServiceFilter = (serviceType: string) => {
   filters.value.serviceType = filters.value.serviceType === serviceType ? 'all' : serviceType
 }
 
@@ -663,13 +651,13 @@ const clearDateFilter = () => {
   filters.value.quickDateFilter = ''
 }
 
-const setQuickDateFilter = (period) => {
+const setQuickDateFilter = (period: string) => {
   filters.value.quickDateFilter = period
   const today = new Date()
 
   switch (period) {
     case 'today': {
-      const todayStr = today.toISOString().split('T')[0]
+      const todayStr = today.toISOString().split('T')[0]!
       filters.value.dateRange = { start: todayStr, end: todayStr }
       break
     }
@@ -679,8 +667,8 @@ const setQuickDateFilter = (period) => {
       const endOfWeek = new Date(startOfWeek)
       endOfWeek.setDate(startOfWeek.getDate() + 6)
       filters.value.dateRange = {
-        start: startOfWeek.toISOString().split('T')[0],
-        end: endOfWeek.toISOString().split('T')[0]
+        start: startOfWeek.toISOString().split('T')[0]!,
+        end: endOfWeek.toISOString().split('T')[0]!
       }
       break
     }
@@ -688,8 +676,8 @@ const setQuickDateFilter = (period) => {
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
       const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
       filters.value.dateRange = {
-        start: startOfMonth.toISOString().split('T')[0],
-        end: endOfMonth.toISOString().split('T')[0]
+        start: startOfMonth.toISOString().split('T')[0]!,
+        end: endOfMonth.toISOString().split('T')[0]!
       }
       break
     }
@@ -697,8 +685,8 @@ const setQuickDateFilter = (period) => {
       const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
       const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0)
       filters.value.dateRange = {
-        start: startOfLastMonth.toISOString().split('T')[0],
-        end: endOfLastMonth.toISOString().split('T')[0]
+        start: startOfLastMonth.toISOString().split('T')[0]!,
+        end: endOfLastMonth.toISOString().split('T')[0]!
       }
       break
     }
@@ -715,7 +703,7 @@ const clearAllFilters = () => {
 }
 
 // Sélection multiple
-const toggleOrderSelection = (orderId) => {
+const toggleOrderSelection = (orderId: string) => {
   const index = selectedOrders.value.indexOf(orderId)
   if (index > -1) {
     selectedOrders.value.splice(index, 1)
@@ -724,20 +712,21 @@ const toggleOrderSelection = (orderId) => {
   }
 }
 
-const toggleSelectAll = (event) => {
-  if (event.target.checked) {
+const toggleSelectAll = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.checked) {
     selectedOrders.value = filteredOrders.value.map(order => order.id)
   } else {
     selectedOrders.value = []
   }
 }
 
-const isOrderSelected = (orderId) => {
+const isOrderSelected = (orderId: string) => {
   return selectedOrders.value.includes(orderId)
 }
 
 // Gestion des modales de suppression
-const openDeleteModal = (type, orderId, count) => {
+const openDeleteModal = (type: string, orderId: string | null, count: number) => {
   deleteModalData.value = {
     type,
     orderId,
@@ -778,8 +767,15 @@ const closeSuccessModal = () => {
   successMessage.value = ''
 }
 
+// Fonction pour émettre l'événement de mise à jour du badge
+const emitOrderStatusChange = (orderId: string, newStatus: string) => {
+  window.dispatchEvent(new CustomEvent('orderStatusChanged', {
+    detail: { orderId, newStatus }
+  }))
+}
+
 // Gestion des commandes
-const openOrderDetails = (order) => {
+const openOrderDetails = (order: Order) => {
   selectedOrder.value = order
 }
 
@@ -787,7 +783,7 @@ const closeOrderDetails = () => {
   selectedOrder.value = null
 }
 
-const acceptOrder = (orderId) => {
+const acceptOrder = (orderId: string) => {
   const order = orders.value.find(o => o.id === orderId)
   if (order) {
     order.status = 'accepted'
@@ -800,37 +796,36 @@ const acceptOrder = (orderId) => {
     saveOrders()
     showSuccessModal.value = true
     successMessage.value = `La commande #${orderId} a été acceptée avec succès.`
+    
+    // Émettre l'événement pour mettre à jour le badge
+    emitOrderStatusChange(orderId, 'accepted')
   }
 }
 
-const progressOrderStatus = (order) => {
+// Nouvelle logique simplifiée : passer directement à "terminée"
+const completeOrder = (order: Order) => {
   if (!order) return
-
-  const currentStatus = order.status
+  
   if (!order.statusHistory) order.statusHistory = []
-
-  const statusFlow = {
-    accepted: 'in_pickup',
-    in_pickup: 'processing',
-    processing: 'ready_for_delivery',
-    ready_for_delivery: 'in_delivery',
-    in_delivery: 'completed'
-  }
-
-  if (statusFlow[currentStatus]) {
-    order.status = statusFlow[currentStatus]
-    order.statusHistory.push({
-      status: order.status,
-      label: getStatusLabel(order.status),
-      timestamp: new Date().toISOString()
-    })
-    saveOrders()
-    showSuccessModal.value = true
-    successMessage.value = `La commande #${order.id} est maintenant "${getStatusLabel(order.status)}".`
-  }
+  
+  order.status = 'completed'
+  order.statusHistory.push({
+    status: 'completed',
+    label: 'Commande terminée',
+    timestamp: new Date().toISOString()
+  })
+  
+  saveOrders()
+  showSuccessModal.value = true
+  successMessage.value = `La commande #${order.id} est maintenant terminée.`
+  
+  // Émettre l'événement pour mettre à jour le badge
+  emitOrderStatusChange(order.id, 'completed')
+  
+  closeOrderDetails()
 }
 
-const openRefusalModal = (order) => {
+const openRefusalModal = (order: Order) => {
   refusalOrder.value = order
   refusalReason.value = ''
   showRefusalModal.value = true
@@ -844,7 +839,7 @@ const closeRefusalModal = () => {
 
 const confirmRefuseOrder = () => {
   if (refusalOrder.value && refusalReason.value.trim()) {
-    const order = orders.value.find(o => o.id === refusalOrder.value.id)
+    const order = orders.value.find(o => o.id === refusalOrder.value!.id)
     if (order) {
       order.status = 'refused'
       order.refusalReason = refusalReason.value.trim()
@@ -852,6 +847,10 @@ const confirmRefuseOrder = () => {
       saveOrders()
       showSuccessModal.value = true
       successMessage.value = `La commande #${order.id} a été refusée avec succès.`
+      
+      // Émettre l'événement pour mettre à jour le badge
+      emitOrderStatusChange(order.id, 'refused')
+      
       closeRefusalModal()
       closeOrderDetails()
     }
@@ -864,22 +863,25 @@ const closeFiltersModal = () => {
 }
 
 // Utilitaires
-const getStatusLabel = (status) => {
-  const labels = {
+const getStatusLabel = (status: string) => {
+  const labels: Record<string, string> = {
     pending: 'En attente',
     accepted: 'Acceptée',
-    in_pickup: 'Ramassage en cours',
-    processing: 'En traitement',
-    ready_for_delivery: 'Prête à livrer',
-    in_delivery: 'En livraison',
     completed: 'Terminée',
     refused: 'Refusée'
   }
   return labels[status] || status
 }
 
-const getServiceLabel = (serviceType) => {
-  const labels = {
+const getServiceLabel = (serviceType: string) => {
+  // Si c'est un ID de service, chercher le nom correspondant
+  if (serviceType.startsWith('SRV')) {
+    const service = services.value.find(s => s.id === serviceType)
+    return service ? service.name : serviceType
+  }
+  
+  // Fallback pour les anciens types de service
+  const labels: Record<string, string> = {
     dry_cleaning: 'Nettoyage à sec',
     express: 'Express',
     delicate: 'Lavage délicat',
@@ -888,38 +890,30 @@ const getServiceLabel = (serviceType) => {
   return labels[serviceType] || serviceType
 }
 
-const getStatusBadgeClass = (status) => {
-  const classes = {
+const getStatusBadgeClass = (status: string) => {
+  const classes: Record<string, string> = {
     pending: 'badge-orange',
     accepted: 'badge-green',
-    in_pickup: 'badge-cyan',
-    processing: 'badge-purple',
-    ready_for_delivery: 'badge-yellow',
-    in_delivery: 'badge-blue',
     completed: 'badge-blue',
     refused: 'badge-red'
   }
   return classes[status] || ''
 }
 
-const getServiceBadgeClass = (serviceType) => {
-  const classes = {
-    dry_cleaning: 'badge-purple',
-    express: 'badge-yellow',
-    delicate: 'badge-pink',
-    standard: 'badge-cyan'
-  }
-  return classes[serviceType] || ''
+const getServiceBadgeClass = (serviceType: string) => {
+  // Tous les services ont maintenant la même classe de badge
+  return 'badge-blue'
 }
 
-const getStatusIcon = (status) => {
-  const icons = {
+const getServiceIcon = (serviceType: string) => {
+  // Icône unique pour tous les services
+  return 'fas fa-cogs'
+}
+
+const getStatusIcon = (status: string) => {
+  const icons: Record<string, string> = {
     pending: 'fas fa-clock',
     accepted: 'fas fa-check',
-    in_pickup: 'fas fa-truck-loading',
-    processing: 'fas fa-cog',
-    ready_for_delivery: 'fas fa-box-open',
-    in_delivery: 'fas fa-shipping-fast',
     completed: 'fas fa-flag-checkered',
     refused: 'fas fa-times',
     all: 'fas fa-filter'
@@ -927,51 +921,36 @@ const getStatusIcon = (status) => {
   return icons[status] || 'fas fa-question'
 }
 
-const getServiceIcon = (serviceType) => {
-  const icons = {
-    dry_cleaning: 'fas fa-wind',
-    express: 'fas fa-bolt',
-    delicate: 'fas fa-feather',
-    standard: 'fas fa-tint',
-    all: 'fas fa-cogs'
-  }
-  return icons[serviceType] || 'fas fa-question'
-}
-
-const getProgressButtonLabel = (status) => {
-  const labels = {
-    accepted: 'Lancer le ramassage',
-    in_pickup: 'Colis reçu - Démarrer le traitement',
-    processing: 'Traitement terminé - Prêt pour livraison',
-    ready_for_delivery: 'Lancer la livraison',
-    in_delivery: 'Confirmer la livraison'
-  }
-  return labels[status] || 'Continuer'
-}
-
-const getProgressButtonIcon = (status) => {
-  const icons = {
-    accepted: 'fas fa-truck-loading',
-    in_pickup: 'fas fa-box',
-    processing: 'fas fa-check-circle',
-    ready_for_delivery: 'fas fa-shipping-fast',
-    in_delivery: 'fas fa-flag-checkered'
-  }
-  return icons[status] || 'fas fa-arrow-right'
-}
-
-const formatDate = (dateString) => {
+const formatDate = (dateString: string) => {
   const date = new Date(dateString)
   return date.toLocaleDateString('fr-FR')
 }
 
-const formatDateTime = (dateString) => {
+const formatDateTime = (dateString: string) => {
   const date = new Date(dateString)
   return date.toLocaleString('fr-FR')
 }
 
+// Fonction pour obtenir la date d'aujourd'hui au format YYYY-MM-DD
+const getTodayDate = (): string => {
+  const today = new Date()
+  return today.toISOString().split('T')[0]!
+}
+
+// Fonction pour obtenir une date future (pour les dates de livraison)
+const getFutureDate = (daysToAdd: number): string => {
+  const date = new Date()
+  date.setDate(date.getDate() + daysToAdd)
+  return date.toISOString().split('T')[0]!
+}
+
 const saveOrders = () => {
   localStorage.setItem('presso_orders', JSON.stringify(orders.value))
+  
+  // Émettre un event pour synchroniser avec d'autres pages
+  window.dispatchEvent(new CustomEvent('ordersUpdated', {
+    detail: { orders: orders.value }
+  }))
 }
 
 const loadOrders = () => {
@@ -990,11 +969,66 @@ const loadOrders = () => {
   }
 }
 
-const getDefaultOrders = () => {
+const loadServices = () => {
+  const savedServices = localStorage.getItem('presso_services')
+  if (savedServices) {
+    try {
+      services.value = JSON.parse(savedServices)
+    } catch (e) {
+      console.error('Erreur lors du chargement des services:', e)
+      // Si les services ne sont pas trouvés, on initialise avec des services par défaut
+      services.value = getDefaultServices()
+      saveServices()
+    }
+  } else {
+    services.value = getDefaultServices()
+    saveServices()
+  }
+}
+
+const saveServices = () => {
+  localStorage.setItem('presso_services', JSON.stringify(services.value))
+}
+
+const getDefaultServices = (): Service[] => {
+  return [
+    {
+      id: 'SRV001',
+      name: 'Nettoyage à sec',
+      category: 'pressing',
+      price: 12.0,
+      duration: '48h',
+      description: 'Nettoyage professionnel à sec pour tous types de vêtements',
+      active: true,
+    },
+    {
+      id: 'SRV002',
+      name: 'Repassage',
+      category: 'pressing',
+      price: 8.0,
+      duration: '24h',
+      description: 'Repassage soigné et professionnel',
+      active: true,
+    },
+    {
+      id: 'SRV003',
+      name: 'Lavage et repassage',
+      category: 'laverie',
+      price: 15.0,
+      duration: '48h',
+      description: 'Service complet de lavage et repassage',
+      active: true,
+    },
+  ]
+}
+
+const getDefaultOrders = (): Order[] => {
+  const today = getTodayDate()
+  
   return [
     {
       id: 'CMD001',
-      serviceType: 'dry_cleaning',
+      serviceType: 'SRV001', // Utiliser l'ID du service
       items: ['Chemise blanche', 'Pantalon costume', 'Robe de soirée'],
       itemsWithQuantities: [
         { name: 'Chemise blanche', quantity: 2, price: 8.0 },
@@ -1003,11 +1037,11 @@ const getDefaultOrders = () => {
       ],
       totalItems: 4,
       address: '25 Avenue des Champs, Paris 75008',
-      deliveryDate: '2025-01-22',
+      deliveryDate: getFutureDate(2),
       deliveryTime: '14:00-16:00',
       price: 45.0,
       status: 'pending',
-      createdAt: '2025-01-18T10:30:00',
+      createdAt: `${today}T10:30:00`,
       specialInstructions: 'Urgent - Évènement important',
       customer: {
         name: 'Jean Dupont',
@@ -1016,7 +1050,7 @@ const getDefaultOrders = () => {
     },
     {
       id: 'CMD002',
-      serviceType: 'express',
+      serviceType: 'SRV002', // Utiliser l'ID du service
       items: ['Costume 2 pièces', 'Cravate'],
       itemsWithQuantities: [
         { name: 'Costume 2 pièces', quantity: 1, price: 30.0 },
@@ -1024,49 +1058,45 @@ const getDefaultOrders = () => {
       ],
       totalItems: 3,
       address: '10 Boulevard Saint-Germain, Paris 75005',
-      deliveryDate: '2025-01-21',
+      deliveryDate: getFutureDate(1),
       deliveryTime: '16:00-18:00',
       price: 40.0,
       status: 'accepted',
-      createdAt: '2025-01-17T14:20:00',
+      createdAt: `${today}T14:20:00`,
       specialInstructions: 'Repassage soigné',
       customer: {
         name: 'Marie Martin',
         phone: '+33 6 98 76 54 32'
       },
       statusHistory: [
-        { status: 'accepted', label: 'Commande acceptée', timestamp: '2025-01-17T15:00:00' }
+        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T15:00:00` }
       ]
     },
     {
       id: 'CMD003',
-      serviceType: 'delicate',
+      serviceType: 'SRV003', // Utiliser l'ID du service
       items: ['Linge de maison'],
       itemsWithQuantities: [
         { name: 'Linge de maison', quantity: 8, price: 7.5 }
       ],
       totalItems: 8,
       address: '5 Rue Victor Hugo, Paris 75016',
-      deliveryDate: '2025-01-23',
+      deliveryDate: getFutureDate(3),
       price: 60.0,
       status: 'completed',
-      createdAt: '2025-01-16T09:15:00',
+      createdAt: `${today}T09:15:00`,
       customer: {
         name: 'Pierre Lambert',
         phone: '+33 6 45 67 89 01'
       },
       statusHistory: [
-        { status: 'accepted', label: 'Commande acceptée', timestamp: '2025-01-16T10:00:00' },
-        { status: 'in_pickup', label: 'Ramassage en cours', timestamp: '2025-01-16T11:30:00' },
-        { status: 'processing', label: 'En traitement', timestamp: '2025-01-17T09:00:00' },
-        { status: 'ready_for_delivery', label: 'Prête à livrer', timestamp: '2025-01-18T14:00:00' },
-        { status: 'in_delivery', label: 'En livraison', timestamp: '2025-01-19T10:00:00' },
-        { status: 'completed', label: 'Commande terminée', timestamp: '2025-01-19T16:00:00' }
+        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T10:00:00` },
+        { status: 'completed', label: 'Commande terminée', timestamp: `${today}T16:00:00` }
       ]
     },
     {
       id: 'CMD004',
-      serviceType: 'standard',
+      serviceType: 'SRV001',
       items: ['Veste en cuir', 'Pull en laine'],
       itemsWithQuantities: [
         { name: 'Veste en cuir', quantity: 1, price: 25.0 },
@@ -1074,16 +1104,127 @@ const getDefaultOrders = () => {
       ],
       totalItems: 4,
       address: '15 Rue de Rivoli, Paris 75004',
-      deliveryDate: '2025-01-24',
+      deliveryDate: getFutureDate(4),
+      requestedDate: getFutureDate(1),
+      requestedTime: '11:00-13:00',
       price: 70.0,
       status: 'refused',
-      createdAt: '2025-01-15T11:00:00',
+      createdAt: `${today}T11:00:00`,
       refusalReason: 'Service non disponible pour les articles en cuir',
-      refusedAt: '2025-01-15T14:30:00',
+      refusedAt: `${today}T14:30:00`,
       customer: {
         name: 'Sophie Bernard',
         phone: '+33 6 23 45 67 89'
       }
+    },
+    {
+      id: 'CMD005',
+      serviceType: 'SRV002',
+      items: ['Chemisier soie', 'Jupe lin'],
+      itemsWithQuantities: [
+        { name: 'Chemisier soie', quantity: 2, price: 18.0 },
+        { name: 'Jupe lin', quantity: 1, price: 22.0 }
+      ],
+      totalItems: 3,
+      address: '8 Avenue Montaigne, Paris 75008',
+      deliveryDate: getFutureDate(2),
+      deliveryTime: '09:00-11:00',
+      price: 58.0,
+      status: 'pending',
+      createdAt: `${today}T16:45:00`,
+      specialInstructions: 'Attention aux tissus délicats',
+      customer: {
+        name: 'Claire Dubois',
+        phone: '+33 6 34 56 78 90'
+      }
+    },
+    {
+      id: 'CMD006',
+      serviceType: 'SRV003',
+      items: ['Couettes', 'Draps', 'Taies d\'oreiller'],
+      itemsWithQuantities: [
+        { name: 'Couettes', quantity: 2, price: 35.0 },
+        { name: 'Draps', quantity: 4, price: 12.0 },
+        { name: 'Taies d\'oreiller', quantity: 8, price: 6.0 }
+      ],
+      totalItems: 14,
+      address: '22 Rue du Faubourg Saint-Honoré, Paris 75008',
+      deliveryDate: getFutureDate(5),
+      price: 150.0,
+      status: 'accepted',
+      createdAt: `${today}T13:20:00`,
+      customer: {
+        name: 'Hôtel Plaza',
+        phone: '+33 1 42 68 90 12'
+      },
+      statusHistory: [
+        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T14:00:00` }
+      ]
+    },
+    {
+      id: 'CMD007',
+      serviceType: 'SRV001',
+      items: ['Costume trois pièces', 'Chemise blanche'],
+      itemsWithQuantities: [
+        { name: 'Costume trois pièces', quantity: 1, price: 45.0 },
+        { name: 'Chemise blanche', quantity: 3, price: 9.0 }
+      ],
+      totalItems: 4,
+      address: '3 Place de la Concorde, Paris 75008',
+      deliveryDate: getFutureDate(3),
+      deliveryTime: '17:00-19:00',
+      price: 72.0,
+      status: 'completed',
+      createdAt: `${today}T08:30:00`,
+      customer: {
+        name: 'Thomas Moreau',
+        phone: '+33 6 78 90 12 34'
+      },
+      statusHistory: [
+        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T09:15:00` },
+        { status: 'completed', label: 'Commande terminée', timestamp: `${today}T16:45:00` }
+      ]
+    },
+    {
+      id: 'CMD008',
+      serviceType: 'SRV002',
+      items: ['Robe de mariée'],
+      itemsWithQuantities: [
+        { name: 'Robe de mariée', quantity: 1, price: 120.0 }
+      ],
+      totalItems: 1,
+      address: '45 Avenue George V, Paris 75008',
+      deliveryDate: getFutureDate(7),
+      price: 120.0,
+      status: 'pending',
+      createdAt: `${today}T15:10:00`,
+      specialInstructions: 'TRÈS URGENT - Mariée samedi prochain',
+      customer: {
+        name: 'Élodie Petit',
+        phone: '+33 6 91 23 45 67'
+      }
+    },
+    {
+      id: 'CMD009',
+      serviceType: 'SRV003',
+      items: ['Serviettes de bain', 'Nappes'],
+      itemsWithQuantities: [
+        { name: 'Serviettes de bain', quantity: 12, price: 8.0 },
+        { name: 'Nappes', quantity: 6, price: 15.0 }
+      ],
+      totalItems: 18,
+      address: '18 Rue de la Paix, Paris 75002',
+      deliveryDate: getFutureDate(4),
+      price: 186.0,
+      status: 'accepted',
+      createdAt: `${today}T11:45:00`,
+      customer: {
+        name: 'Restaurant Le Gourmet',
+        phone: '+33 1 40 20 30 40'
+      },
+      statusHistory: [
+        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T12:30:00` }
+      ]
     }
   ]
 }
@@ -1095,14 +1236,37 @@ const handleScroll = () => {
   }
 }
 
-// Lifecycle
+// Écouter les événements de synchronisation
+const handleOrderStatusChange = (event: CustomEvent) => {
+  const { orderId, newStatus } = event.detail
+  const order = orders.value.find(o => o.id === orderId)
+  if (order) {
+    order.status = newStatus
+    saveOrders()
+  }
+}
+
+// Écouter les mises à jour des services
+const handleServicesUpdated = (event: CustomEvent) => {
+  const { services: updatedServices } = event.detail
+  services.value = updatedServices
+  saveServices()
+}
+
 onMounted(() => {
+  loadServices()
   loadOrders()
   window.addEventListener('scroll', handleScroll)
+  
+  // Écouter les changements depuis d'autres pages
+  window.addEventListener('orderStatusChanged', handleOrderStatusChange as EventListener)
+  window.addEventListener('servicesUpdated', handleServicesUpdated as EventListener)
 })
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
+  window.removeEventListener('orderStatusChanged', handleOrderStatusChange as EventListener)
+  window.removeEventListener('servicesUpdated', handleServicesUpdated as EventListener)
 })
 </script>
 

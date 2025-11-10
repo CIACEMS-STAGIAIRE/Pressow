@@ -76,8 +76,8 @@
               <i class="fas fa-shopping-bag"></i>
             </div>
             <span class="nav-text" v-if="!isSidebarCollapsed">Commandes</span>
-            <div class="nav-badge" v-if="pendingOrders > 0 && !isSidebarCollapsed">{{ pendingOrders }}</div>
-            <div class="nav-badge-collapsed" v-if="pendingOrders > 0 && isSidebarCollapsed">{{ pendingOrders }}</div>
+            <div class="nav-badge" v-if="pendingOrdersCount > 0 && !isSidebarCollapsed">{{ pendingOrdersCount }}</div>
+            <div class="nav-badge-collapsed" v-if="pendingOrdersCount > 0 && isSidebarCollapsed">{{ pendingOrdersCount }}</div>
             <div class="active-indicator" v-if="isActive('/CommandesOthers')"></div>
           </button>
 
@@ -118,8 +118,7 @@
             </div>
             <span class="nav-text" v-if="!isSidebarCollapsed">Notifications</span>
             <div class="nav-badge" v-if="unreadNotifications > 0 && !isSidebarCollapsed">{{ unreadNotifications }}</div>
-            <div class="nav-badge-collapsed" v-if="unreadNotifications > 0 && isSidebarCollapsed">{{ unreadNotifications
-              }}</div>
+            <div class="nav-badge-collapsed" v-if="unreadNotifications > 0 && isSidebarCollapsed">{{ unreadNotifications }}</div>
             <div class="active-indicator" v-if="isActive('/NotificationsOthers')"></div>
           </button>
 
@@ -133,8 +132,7 @@
               <i class="fas fa-wallet"></i>
             </div>
             <span class="nav-text" v-if="!isSidebarCollapsed">Mon Portefeuille</span>
-            <div class="nav-badge wallet-badge" v-if="walletBalance > 0 && !isSidebarCollapsed">€{{ walletBalance }}
-            </div>
+            <div class="nav-badge wallet-badge" v-if="walletBalance > 0 && !isSidebarCollapsed">€{{ walletBalance }}</div>
             <div class="nav-badge-collapsed wallet-badge" v-if="walletBalance > 0 && isSidebarCollapsed">€</div>
             <div class="active-indicator" v-if="isActive('/PortefeuilleOthers')"></div>
           </button>
@@ -181,18 +179,18 @@
           </button>
         </nav>
 
-        <!-- Logout Button -->
-        <div class="sidebar-footer" :class="{ 'sidebar-footer-collapsed': isSidebarCollapsed }">
-          <button class="logout-btn" @click="handleLogout" :disabled="isLoggingOut"
-            :title="isSidebarCollapsed ? 'Déconnexion' : ''">
-            <div class="logout-icon">
-              <i class="fas fa-sign-out-alt"></i>
-            </div>
-            <span class="logout-text" v-if="!isSidebarCollapsed">
-              {{ isLoggingOut ? 'Déconnexion...' : 'Déconnexion' }}
-            </span>
-          </button>
-        </div>
+      </div>
+      <!-- Logout Button -->
+      <div class="sidebar-footer" :class="{ 'sidebar-footer-collapsed': isSidebarCollapsed }">
+        <button class="logout-btn" @click="handleLogout" :disabled="isLoggingOut"
+          :title="isSidebarCollapsed ? 'Déconnexion' : ''">
+          <div class="logout-icon">
+            <i class="fas fa-sign-out-alt"></i>
+          </div>
+          <span class="logout-text" v-if="!isSidebarCollapsed">
+            {{ isLoggingOut ? 'Déconnexion...' : 'Déconnexion' }}
+          </span>
+        </button>
       </div>
     </aside>
 
@@ -263,6 +261,27 @@ interface Shop {
   prestations: string[]
 }
 
+interface Notification {
+  id: string
+  type: string
+  title: string
+  message: string
+  timestamp: string
+  read: boolean
+  priority: string
+  meta?: {
+    orderId?: string
+    service?: string
+    amount?: number
+    customer?: string
+  }
+  actions?: Array<{
+    type: string
+    label: string
+    icon: string
+  }>
+}
+
 // ====================================================================
 // ÉTATS RÉACTIFS
 // ====================================================================
@@ -275,16 +294,17 @@ const sidebarOpen = ref(false)
 const showLogoutModal = ref(false)
 const isLoggingOut = ref(false)
 const isSidebarCollapsed = ref(false)
+const notificationInterval = ref<number | null>(null)
 
 // Données utilisateur
 const displayUser = ref<User | null>(null)
 const activeShop = ref<Shop | null>(null)
 
 // Données de navigation
-const pendingOrders = ref(3)
+const pendingOrdersCount = ref(0)
 const userRating = ref('4.8')
 const walletBalance = ref(125.50)
-const unreadNotifications = ref(5) // ← Nouvel état pour les notifications
+const unreadNotifications = ref(0)
 
 // ====================================================================
 // COMPUTED PROPERTIES
@@ -391,6 +411,161 @@ const getPrestationBadgeClass = (prestation: string) => {
   return classes[prestation] || 'prestation-badge-blue';
 };
 
+// Fonction pour calculer le nombre de commandes en attente
+const calculatePendingOrders = (): number => {
+  try {
+    const savedOrders = localStorage.getItem('presso_orders')
+    if (savedOrders) {
+      const orders = JSON.parse(savedOrders)
+      return orders.filter((order: any) => order.status === 'pending').length
+    }
+  } catch (error) {
+    console.error('Erreur lors du calcul des commandes en attente:', error)
+  }
+  return 0
+}
+
+// Fonction pour calculer le nombre de notifications non lues
+const calculateUnreadNotifications = (): number => {
+  try {
+    const savedNotifications = localStorage.getItem('presso_notifications')
+    if (savedNotifications) {
+      const notifications = JSON.parse(savedNotifications)
+      const unreadCount = notifications.filter((notification: any) => !notification.read).length
+      console.log('Notifications non lues calculées:', unreadCount)
+      return unreadCount
+    }
+  } catch (error) {
+    console.error('Erreur lors du calcul des notifications non lues:', error)
+  }
+  return 0
+}
+
+// Fonction pour mettre à jour le compteur de commandes en attente
+const updatePendingOrdersCount = (): void => {
+  pendingOrdersCount.value = calculatePendingOrders()
+}
+
+// Fonction pour mettre à jour le compteur de notifications non lues
+const updateUnreadNotificationsCount = (): void => {
+  const count = calculateUnreadNotifications()
+  unreadNotifications.value = count
+  console.log('Compteur de notifications mis à jour:', count)
+}
+
+// ====================================================================
+// GESTION GLOBALE DES NOTIFICATIONS
+// ====================================================================
+
+// Méthode pour simuler les notifications globalement
+const simulateGlobalNotification = (): void => {
+  if (Math.random() > 0.2) { // 80% de chance
+    const types = [
+      'order_new',
+      'payment_received', 
+      'system_alert',
+      'order_completed',
+      'service_added'
+    ]
+    
+    const randomType = types[Math.floor(Math.random() * types.length)] as string
+    
+    const newNotification: Notification = {
+      id: Date.now().toString(),
+      type: randomType,
+      title: getRandomTitle(randomType),
+      message: getRandomMessage(randomType),
+      timestamp: new Date().toISOString(),
+      read: false,
+      priority: Math.random() > 0.7 ? 'high' : 'medium'
+    }
+    
+    // Ajouter des métadonnées selon le type
+    if (randomType === 'order_new') {
+      newNotification.meta = {
+        orderId: 'CMD' + (1000 + Math.floor(Math.random() * 900)),
+        service: ['Nettoyage à sec', 'Repassage', 'Lavage'][Math.floor(Math.random() * 3)],
+        amount: parseFloat((20 + Math.floor(Math.random() * 80)).toFixed(2)),
+        customer: ['Marie', 'Pierre', 'Sophie', 'Jean'][Math.floor(Math.random() * 4)] + ' ' + ['Martin', 'Dubois', 'Lambert', 'Moreau'][Math.floor(Math.random() * 4)]
+      }
+      newNotification.actions = [
+        { type: 'view_order', label: 'Voir la commande', icon: 'fas fa-eye' },
+        { type: 'accept_order', label: 'Accepter', icon: 'fas fa-check' }
+      ]
+    } else if (randomType === 'payment_received') {
+      newNotification.meta = {
+        amount: parseFloat((50 + Math.floor(Math.random() * 200)).toFixed(2))
+      }
+    }
+    
+    addGlobalNotification(newNotification)
+  }
+}
+
+const getRandomTitle = (type: string): string => {
+  const titles: Record<string, string> = {
+    'order_new': 'Nouvelle commande reçue',
+    'payment_received': 'Paiement reçu',
+    'system_alert': 'Alerte système',
+    'order_completed': 'Commande terminée',
+    'service_added': 'Nouveau service'
+  }
+  return titles[type] || 'Nouvelle notification'
+}
+
+const getRandomMessage = (type: string): string => {
+  const messages: Record<string, string> = {
+    'order_new': 'Une nouvelle commande a été créée pour vos services.',
+    'payment_received': 'Un paiement a été crédité sur votre compte.',
+    'system_alert': 'Une mise à jour système est disponible.',
+    'order_completed': 'Une commande a été livrée avec succès.',
+    'service_added': 'Un nouveau service a été configuré.'
+  }
+  return messages[type] || 'Vous avez une nouvelle notification.'
+}
+
+const addGlobalNotification = (newNotification: Notification): void => {
+  try {
+    const savedNotifications = localStorage.getItem('presso_notifications')
+    let notifications = savedNotifications ? JSON.parse(savedNotifications) : []
+    
+    // Ajouter la nouvelle notification au début
+    notifications.unshift(newNotification)
+    
+    // Sauvegarder dans localStorage
+    localStorage.setItem('presso_notifications', JSON.stringify(notifications))
+    
+    // Émettre l'événement de mise à jour
+    window.dispatchEvent(new CustomEvent('notificationsUpdated'))
+    
+    console.log('Nouvelle notification globale générée:', newNotification)
+  } catch (error) {
+    console.error('Erreur lors de l\'ajout de la notification globale:', error)
+  }
+}
+
+// Démarrer la simulation globale des notifications
+const startGlobalNotificationSimulation = (): void => {
+  // Nettoyer l'intervalle existant
+  if (notificationInterval.value) {
+    clearInterval(notificationInterval.value)
+  }
+  
+  // Démarrer un nouvel intervalle (toutes les 30 secondes pour les tests)
+  notificationInterval.value = setInterval(simulateGlobalNotification, 30000)
+  
+  console.log('Simulation globale des notifications démarrée')
+}
+
+// Arrêter la simulation
+const stopGlobalNotificationSimulation = (): void => {
+  if (notificationInterval.value) {
+    clearInterval(notificationInterval.value)
+    notificationInterval.value = null
+    console.log('Simulation globale des notifications arrêtée')
+  }
+}
+
 // ====================================================================
 // GESTION DE L'INTERFACE
 // ====================================================================
@@ -431,6 +606,9 @@ const confirmLogout = async () => {
     sessionStorage.removeItem('currentUserData')
     localStorage.removeItem('sidebarCollapsed')
 
+    // Arrêter la simulation des notifications
+    stopGlobalNotificationSimulation()
+
     // Réinitialiser les données affichées
     displayUser.value = null
     activeShop.value = null
@@ -454,6 +632,40 @@ const handleUserDataUpdate = (event: CustomEvent) => {
   if (event.detail.user) {
     displayUser.value = event.detail.user
     updateActiveShop()
+  }
+}
+
+// Écouter les changements de statut des commandes
+const handleOrderStatusChange = (event: CustomEvent) => {
+  const { orderId, newStatus } = event.detail
+  console.log(`Statut de la commande ${orderId} changé en: ${newStatus}`)
+  updatePendingOrdersCount()
+}
+
+// Écouter les mises à jour des commandes
+const handleOrdersUpdated = (event: CustomEvent) => {
+  console.log('Commandes mises à jour, recalcul des commandes en attente')
+  updatePendingOrdersCount()
+}
+
+// Écouter les mises à jour des notifications
+const handleNotificationsUpdated = (event: CustomEvent) => {
+  console.log('Notifications mises à jour, recalcul des notifications non lues')
+  updateUnreadNotificationsCount()
+}
+
+// Écouter les changements de statut des notifications
+const handleNotificationStatusChange = (event: CustomEvent) => {
+  const { notificationId, read } = event.detail
+  console.log(`Statut de la notification ${notificationId} changé en: ${read ? 'lu' : 'non lu'}`)
+  updateUnreadNotificationsCount()
+}
+
+// Gestionnaire des changements de localStorage
+const handleStorageChange = (event: StorageEvent) => {
+  if (event.key === 'presso_notifications') {
+    console.log('Stockage localStorage des notifications modifié')
+    updateUnreadNotificationsCount()
   }
 }
 
@@ -487,17 +699,50 @@ onMounted(() => {
     isSidebarCollapsed.value = JSON.parse(savedState)
   }
 
+  // Calculer les compteurs initiaux
+  updatePendingOrdersCount()
+  updateUnreadNotificationsCount()
+
+  // DÉMARRER LA SIMULATION GLOBALE DES NOTIFICATIONS
+  startGlobalNotificationSimulation()
+
   // Écouter les mises à jour des données utilisateur
   window.addEventListener('userDataUpdated', handleUserDataUpdate as EventListener)
+
+  // Écouter les changements de statut des commandes
+  window.addEventListener('orderStatusChanged', handleOrderStatusChange as EventListener)
+  
+  // Écouter les mises à jour générales des commandes
+  window.addEventListener('ordersUpdated', handleOrdersUpdated as EventListener)
+
+  // Écouter les mises à jour des notifications
+  window.addEventListener('notificationsUpdated', handleNotificationsUpdated as EventListener)
+  window.addEventListener('notificationStatusChanged', handleNotificationStatusChange as EventListener)
+
+  // Écouter le stockage localStorage pour les notifications
+  window.addEventListener('storage', handleStorageChange)
 
   // Autres écouteurs d'événements
   window.addEventListener('resize', handleResize)
   window.addEventListener('keydown', handleKeydown)
+
+  // Forcer une vérification initiale
+  setTimeout(() => {
+    updateUnreadNotificationsCount()
+  }, 100)
 })
 
 onUnmounted(() => {
+  // Arrêter la simulation des notifications
+  stopGlobalNotificationSimulation()
+
   // Nettoyer les écouteurs d'événements
   window.removeEventListener('userDataUpdated', handleUserDataUpdate as EventListener)
+  window.removeEventListener('orderStatusChanged', handleOrderStatusChange as EventListener)
+  window.removeEventListener('ordersUpdated', handleOrdersUpdated as EventListener)
+  window.removeEventListener('notificationsUpdated', handleNotificationsUpdated as EventListener)
+  window.removeEventListener('notificationStatusChanged', handleNotificationStatusChange as EventListener)
+  window.removeEventListener('storage', handleStorageChange)
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('keydown', handleKeydown)
 })

@@ -152,8 +152,9 @@
 
 .user-info-container {
   display: flex;
-  gap: 15px;
   align-items: center;
+  gap: 12px;
+  min-width: 0; /* Très important pour que le texte puisse être tronqué */
 }
 
 .user-info-collapsed .user-info-container {
@@ -193,13 +194,11 @@
 }
 
 .user-name {
-  font-weight: 700;
-  color: #081022;
-  margin: 0 0 6px 0;
-  font-size: 16px;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 100px; /* Ajuste selon ton layout */
+  flex-shrink: 1;
 }
 
 .user-phone {

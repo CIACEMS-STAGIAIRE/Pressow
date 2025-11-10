@@ -24,11 +24,11 @@
           </div>
           <div class="welcome-stat">
             <i class="fas fa-money-bill-wave"></i>
-            <span>{{ formatCurrency(stats.revenue.daily) }} FCFA</span>
+            <span>{{ formatCurrency(todayStats.revenue) }} FCFA</span>
           </div>
           <div class="welcome-stat">
             <i class="fas fa-box"></i>
-            <span>{{ stats.orders.daily }} commandes</span>
+            <span>{{ todayStats.orders }} commandes</span>
           </div>
         </div>
       </div>
@@ -63,7 +63,7 @@
               <h3>Commandes Récentes</h3>
             </div>
             <div class="header-actions">
-              <router-link to="/Commandes">
+              <router-link to="/CommandesOthers">
                 <button class="view-all-btn">
                   <i class="fas fa-list"></i>Voir tout
                 </button>
@@ -75,13 +75,8 @@
           <!-- Utilisation du même design que la page Orders -->
           <div class="orders-list">
 
-            <!-- Cartes des commandes -->
-            <div
-              v-for="order in recentOrders"
-              :key="order.id"
-              class="orders-order-card"
-              @click="viewOrder(order)"
-            >
+            <!-- Cartes des commandes - Même structure que Commandes.vue mais sans sélection/suppression -->
+            <div v-for="order in recentOrders" :key="order.id" class="orders-order-card" @click="openOrderDetails(order)">
               <div class="card-content">
                 <div class="order-header">
                   <div class="order-header-left">
@@ -89,11 +84,11 @@
                       <div class="order-id-section">
                         <h3 class="order-id">#{{ order.id }}</h3>
                         <div class="badges-container">
-                          <span :class="getStatusBadgeClass(order.status)" class="status-badge">
+                          <span :class="['status-badge', getStatusBadgeClass(order.status)]">
                             <i :class="getStatusIcon(order.status)"></i>
                             {{ getStatusLabel(order.status) }}
                           </span>
-                          <span :class="getServiceBadgeClass(order.serviceType)" class="service-badge">
+                          <span :class="['service-badge', getServiceBadgeClass(order.serviceType)]">
                             <i :class="getServiceIcon(order.serviceType)"></i>
                             {{ getServiceLabel(order.serviceType) }}
                           </span>
@@ -103,10 +98,7 @@
                     </div>
                   </div>
                   <div class="order-header-actions">
-                    <button 
-                      @click.stop="viewOrder(order)" 
-                      class="BtnGlobal2 details-btn"
-                    >
+                    <button class="BtnGlobal2 details-btn" @click.stop="openOrderDetails(order)">
                       <i class="fas fa-eye"></i>
                       Détails
                     </button>
@@ -123,7 +115,7 @@
                       </span>
                       <span class="order-info-value">{{ order.totalItems }} article(s)</span>
                     </div>
-                    
+
                     <!-- Adresse unique (collecte = livraison) -->
                     <div class="order-info-row">
                       <span class="order-info-label">
@@ -156,7 +148,7 @@
                       </div>
                     </div>
                   </div>
-                  
+
                   <div class="order-info-col-right">
                     <p class="order-price">
                       <i class="fas fa-money-bill-wave"></i>
@@ -171,7 +163,7 @@
             <div v-if="recentOrders.length === 0" class="empty-state">
               <div class="card-content">
                 <div class="empty-icon">
-                  <i class="fas fa-box"></i>
+                  <i class="fas fa-box-open"></i>
                 </div>
                 <p class="empty-message">Aucune commande récente</p>
               </div>
@@ -180,10 +172,9 @@
         </div>
       </div>
 
-      <!-- Modern Mini Modal -->
+      <!-- Modal des détails de commande - Même logique que Commandes.vue -->
       <div v-if="selectedOrder" class="modal-overlay" @click="closeOrderDetails">
         <div class="modern-modal" @click.stop>
-          <!-- Modal Header -->
           <div class="modal-header">
             <div class="modal-title-section">
               <div class="modal-title-info">
@@ -211,7 +202,6 @@
             </button>
           </div>
 
-          <!-- Modal Content -->
           <div class="modal-content">
             <!-- Articles Section -->
             <div class="modal-section">
@@ -220,11 +210,7 @@
                 <h3 class="section-title">Articles commandés</h3>
               </div>
               <div class="items-list">
-                <div
-                  v-for="(item, index) in selectedOrder.itemsWithQuantities"
-                  :key="index"
-                  class="item-row"
-                >
+                <div v-for="(item, index) in selectedOrder.itemsWithQuantities" :key="index" class="item-row">
                   <div class="item-info">
                     <span class="item-name">{{ item.name }}</span>
                     <span class="item-quantity">×{{ item.quantity }}</span>
@@ -262,70 +248,6 @@
               </div>
             </div>
 
-            <!-- Planning Section -->
-            <div v-if="selectedOrder.status !== 'refused'" class="modal-section">
-              <div class="section-header">
-                <i class="fas fa-calendar-alt section-icon"></i>
-                <h3 class="section-title">Planning</h3>
-              </div>
-              <div class="planning-content">
-                <div class="planning-subsection">
-                  <h4 class="planning-subtitle">
-                    <i class="fas fa-box-open"></i>
-                    Dépôt / Ramassage
-                  </h4>
-                  <div class="planning-item">
-                    <i class="fas fa-calendar-day"></i>
-                    <div class="planning-info">
-                      <span class="planning-label">Date de ramassage souhaitée</span>
-                      <span class="planning-value">{{ formatDate(selectedOrder.requestedDate || selectedOrder.createdAt) }}</span>
-                    </div>
-                  </div>
-                  <div class="planning-item">
-                    <i class="fas fa-clock"></i>
-                    <div class="planning-info">
-                      <span class="planning-label">Créneau de ramassage</span>
-                      <span class="planning-value">{{ selectedOrder.requestedTime || 'Non spécifié' }}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="planning-divider"></div>
-
-                <div class="planning-subsection">
-                  <h4 class="planning-subtitle">
-                    <i class="fas fa-shipping-fast"></i>
-                    Récupération / Livraison
-                  </h4>
-                  <div class="planning-item">
-                    <i class="fas fa-calendar-day"></i>
-                    <div class="planning-info">
-                      <span class="planning-label">Date de livraison souhaitée</span>
-                      <span class="planning-value">{{ formatDate(selectedOrder.deliveryDate) }}</span>
-                    </div>
-                  </div>
-                  <div class="planning-item">
-                    <i class="fas fa-clock"></i>
-                    <div class="planning-info">
-                      <span class="planning-label">Créneau de livraison</span>
-                      <span class="planning-value">{{ selectedOrder.deliveryTime || 'Non spécifié' }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Instructions Section -->
-            <div v-if="selectedOrder.specialInstructions" class="modal-section">
-              <div class="section-header">
-                <i class="fas fa-sticky-note section-icon"></i>
-                <h3 class="section-title">Instructions spéciales</h3>
-              </div>
-              <div class="instructions-content">
-                <p>{{ selectedOrder.specialInstructions }}</p>
-              </div>
-            </div>
-
             <!-- Price Summary -->
             <div class="modal-section price-section">
               <div class="section-header">
@@ -340,7 +262,7 @@
               </div>
             </div>
 
-            <!-- Action Buttons -->
+            <!-- Action Buttons - Même logique que Commandes.vue -->
             <div class="modal-actions" v-if="selectedOrder.status === 'pending'">
               <button @click="acceptOrder(selectedOrder.id)" class="action-btn accept-btn BtnGlobal2">
                 <i class="fas fa-check"></i>
@@ -352,19 +274,16 @@
               </button>
             </div>
 
-            <!-- Progress Action Buttons for Accepted Orders -->
-            <div
-              v-if="selectedOrder.status === 'accepted' || selectedOrder.status === 'in_pickup' || selectedOrder.status === 'processing' || selectedOrder.status === 'ready_for_delivery' || selectedOrder.status === 'in_delivery'"
-              class="modal-actions">
-              <!-- Show progress button based on current status -->
-              <button @click="progressOrderStatus(selectedOrder)" class="action-btn accept-btn BtnGlobal2">
-                <i :class="getProgressButtonIcon(selectedOrder.status)"></i>
-                {{ getProgressButtonLabel(selectedOrder.status) }}
+            <!-- Même logique simplifiée pour les commandes acceptées -->
+            <div v-if="selectedOrder.status === 'accepted'" class="modal-actions">
+              <button @click="completeOrder(selectedOrder)" class="action-btn accept-btn BtnGlobal2">
+                <i class="fas fa-flag-checkered"></i>
+                Marquer comme terminée
               </button>
             </div>
 
-            <!-- Close button for refused orders -->
-            <div v-if="selectedOrder.status === 'refused' || selectedOrder.status === 'completed'" class="modal-actions">
+            <!-- Close button for completed orders -->
+            <div v-if="selectedOrder.status === 'completed'" class="modal-actions">
               <button @click="closeOrderDetails" class="action-btn BtnGlobal2">
                 <i class="fas fa-times"></i>
                 Fermer
@@ -374,7 +293,7 @@
         </div>
       </div>
 
-      <!-- Modal de refus -->
+      <!-- Modal de refus - Même logique que Commandes.vue -->
       <div v-if="showRefusalModal" class="modal-overlay" @click="closeRefusalModal">
         <div class="modern-modal" @click.stop>
           <div class="modal-header">
@@ -411,28 +330,65 @@
           </div>
         </div>
       </div>
+
+      <!-- Modal de succès - Même logique que Commandes.vue -->
+      <div v-if="showSuccessModal" class="modal-overlay" @click="closeSuccessModal">
+        <div class="modern-modal" @click.stop>
+          <div class="modal-header">
+            <div class="header-main">
+              <h2 class="dialog-title">
+                <i class="fas fa-check-circle modal-icon"></i>
+                Succès
+              </h2>
+            </div>
+          </div>
+          <div class="modal-content">
+            <div class="success-modal">
+              <p class="success-message">{{ successMessage }}</p>
+              <div class="success-actions">
+                <button @click="closeSuccessModal" class="BtnGlobal2 success-btn">
+                  <i class="fas fa-check"></i>
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </DashboardLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, reactive } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import DashboardLayout from '@/DashboardOthers/Components/DashboardLayout.vue'
 
 const router = useRouter()
 
-interface OrderItem {
+// Types
+interface ItemWithQuantity {
   name: string
   quantity: number
-  price?: number
+  price: number
+}
+
+interface Customer {
+  name: string
+  phone: string
+}
+
+interface StatusHistoryItem {
+  status: string
+  label: string
+  timestamp: string
 }
 
 interface Order {
   id: string
   serviceType: string
   items: string[]
-  itemsWithQuantities: OrderItem[]
+  itemsWithQuantities: ItemWithQuantity[]
   totalItems: number
   address: string
   deliveryDate: string
@@ -443,15 +399,33 @@ interface Order {
   status: string
   createdAt: string
   specialInstructions?: string
+  customer: Customer
+  statusHistory?: StatusHistoryItem[]
   refusalReason?: string
   refusedAt?: string
-  customer?: {
-    name: string
-    phone: string
-  }
-  statusHistory?: { status: string; timestamp: string; label?: string }[]
-  pickupStage?: string
 }
+
+interface Service {
+  id: string
+  name: string
+  category: string
+  price: number
+  duration: string
+  description: string
+  active: boolean
+}
+
+// Données réactives - Même structure que Commandes.vue
+const orders = ref<Order[]>([])
+const services = ref<Service[]>([])
+const selectedOrder = ref<Order | null>(null)
+const showRefusalModal = ref(false)
+const refusalOrder = ref<Order | null>(null)
+const refusalReason = ref('')
+
+// États pour les modales - Même structure que Commandes.vue
+const showSuccessModal = ref(false)
+const successMessage = ref('')
 
 // Données utilisateur
 const user = ref({
@@ -474,191 +448,80 @@ const userShopName = computed(() => {
   return user.value?.name ? `${user.value.name} - Boutique` : 'Ma Boutique'
 })
 
-// Statistiques
-const stats = reactive({
-  revenue: {
-    daily: 83000,
-    monthly: 2450000,
-    total: 57000000,
-  },
-  orders: {
-    daily: 2,
-    monthly: 18,
-    total: 42,
-    accepted: 28,
-    pending: 2,
-    completed: 10,
-    refused: 2,
-  },
+// NOUVEAU : Statistiques calculées en temps réel pour aujourd'hui
+const todayStats = computed(() => {
+  const today = new Date().toISOString().split('T')[0] as string
+  const todayOrders = orders.value.filter(order => 
+    order.createdAt.startsWith(today)
+  )
+  
+  return {
+    revenue: todayOrders.reduce((sum, order) => sum + order.price, 0),
+    orders: todayOrders.length
+  }
 })
 
-// Commandes récentes - calculées à partir des données partagées
+// NOUVEAU : Statistiques globales calculées en temps réel
+const stats = computed(() => {
+  const allOrders = orders.value
+  
+  return {
+    revenue: {
+      daily: todayStats.value.revenue,
+      monthly: allOrders.reduce((sum, order) => sum + order.price, 0),
+      total: allOrders.reduce((sum, order) => sum + order.price, 0),
+    },
+    orders: {
+      daily: todayStats.value.orders,
+      monthly: allOrders.length,
+      total: allOrders.length,
+      accepted: allOrders.filter(order => order.status === 'accepted').length,
+      pending: allOrders.filter(order => order.status === 'pending').length,
+      completed: allOrders.filter(order => order.status === 'completed').length,
+      refused: allOrders.filter(order => order.status === 'refused').length,
+    },
+  }
+})
+
+// Commandes récentes - Même logique que Commandes.vue mais limitée à 5
 const recentOrders = computed(() => {
-  const allOrders = loadAllOrders()
   // Trier par date de création (plus récent en premier) et prendre les 5 premiers
-  return allOrders
+  return orders.value
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5)
 })
 
-// Fonction pour charger toutes les commandes depuis localStorage
-const loadAllOrders = (): Order[] => {
-  const savedOrders = localStorage.getItem('presso_orders')
-  if (savedOrders) {
-    try {
-      return JSON.parse(savedOrders)
-    } catch (e) {
-      console.error('Erreur lors du chargement des commandes:', e)
-      return getDefaultOrders()
-    }
-  }
-  return getDefaultOrders()
-}
-
-// Fonction pour obtenir les commandes par défaut
-const getDefaultOrders = (): Order[] => {
-  return [
-    {
-      id: 'CMD001',
-      serviceType: 'dry_cleaning',
-      items: ['Chemise blanche', 'Pantalon costume', 'Robe de soirée'],
-      itemsWithQuantities: [
-        { name: 'Chemise blanche', quantity: 2, price: 8.0 },
-        { name: 'Pantalon costume', quantity: 1, price: 12.0 },
-        { name: 'Robe de soirée', quantity: 1, price: 25.0 }
-      ],
-      totalItems: 4,
-      address: '25 Avenue des Champs, Paris 75008',
-      deliveryDate: '2025-01-22',
-      deliveryTime: '14:00-16:00',
-      requestedDate: '2025-01-18',
-      requestedTime: '10:00-12:00',
-      price: 45000,
-      status: 'pending',
-      createdAt: '2025-01-18T10:30:00',
-      specialInstructions: 'Urgent - Évènement important',
-      customer: {
-        name: 'Jean Dupont',
-        phone: '+33 6 12 34 56 78'
-      }
-    },
-    {
-      id: 'CMD002',
-      serviceType: 'express',
-      items: ['Costume 2 pièces', 'Cravate'],
-      itemsWithQuantities: [
-        { name: 'Costume 2 pièces', quantity: 1, price: 30.0 },
-        { name: 'Cravate', quantity: 2, price: 5.0 }
-      ],
-      totalItems: 3,
-      address: '10 Boulevard Saint-Germain, Paris 75005',
-      deliveryDate: '2025-01-21',
-      deliveryTime: '16:00-18:00',
-      requestedDate: '2025-01-17',
-      requestedTime: '14:00-16:00',
-      price: 40000,
-      status: 'accepted',
-      createdAt: '2025-01-17T14:20:00',
-      specialInstructions: 'Repassage soigné',
-      customer: {
-        name: 'Marie Martin',
-        phone: '+33 6 98 76 54 32'
-      },
-      statusHistory: [
-        { status: 'accepted', label: 'Commande acceptée', timestamp: '2025-01-17T15:00:00' }
-      ]
-    },
-    {
-      id: 'CMD003',
-      serviceType: 'delicate',
-      items: ['Linge de maison'],
-      itemsWithQuantities: [
-        { name: 'Linge de maison', quantity: 8, price: 7.5 }
-      ],
-      totalItems: 8,
-      address: '5 Rue Victor Hugo, Paris 75016',
-      deliveryDate: '2025-01-23',
-      requestedDate: '2025-01-16',
-      requestedTime: '09:00-11:00',
-      price: 60000,
-      status: 'completed',
-      createdAt: '2025-01-16T09:15:00',
-      customer: {
-        name: 'Pierre Lambert',
-        phone: '+33 6 45 67 89 01'
-      },
-      statusHistory: [
-        { status: 'accepted', label: 'Commande acceptée', timestamp: '2025-01-16T10:00:00' },
-        { status: 'in_pickup', label: 'Ramassage en cours', timestamp: '2025-01-16T11:30:00' },
-        { status: 'processing', label: 'En traitement', timestamp: '2025-01-17T09:00:00' },
-        { status: 'ready_for_delivery', label: 'Prête à livrer', timestamp: '2025-01-18T14:00:00' },
-        { status: 'in_delivery', label: 'En livraison', timestamp: '2025-01-19T10:00:00' },
-        { status: 'completed', label: 'Commande terminée', timestamp: '2025-01-19T16:00:00' }
-      ]
-    },
-    {
-      id: 'CMD004',
-      serviceType: 'standard',
-      items: ['Veste en cuir', 'Pull en laine'],
-      itemsWithQuantities: [
-        { name: 'Veste en cuir', quantity: 1, price: 25.0 },
-        { name: 'Pull en laine', quantity: 3, price: 15.0 }
-      ],
-      totalItems: 4,
-      address: '15 Rue de Rivoli, Paris 75004',
-      deliveryDate: '2025-01-24',
-      requestedDate: '2025-01-15',
-      requestedTime: '11:00-13:00',
-      price: 70000,
-      status: 'refused',
-      createdAt: '2025-01-15T11:00:00',
-      refusalReason: 'Service non disponible pour les articles en cuir',
-      refusedAt: '2025-01-15T14:30:00',
-      customer: {
-        name: 'Sophie Bernard',
-        phone: '+33 6 23 45 67 89'
-      }
-    }
-  ]
-}
-
-// Statistiques d'état
+// Statistiques d'état - MAINTENANT calculées en temps réel
 const statusStats = computed(() => [
   {
     title: 'Acceptées',
-    value: stats.orders.accepted,
+    value: stats.value.orders.accepted,
     icon: 'fas fa-check-circle',
     bgColor: 'bg-green',
     cardClass: 'status-card-green',
   },
   {
     title: 'En Attente',
-    value: stats.orders.pending,
+    value: stats.value.orders.pending,
     icon: 'fas fa-clock',
     bgColor: 'bg-orange',
     cardClass: 'status-card-orange',
   },
   {
     title: 'Terminées',
-    value: stats.orders.completed,
+    value: stats.value.orders.completed,
     icon: 'fas fa-flag-checkered',
     bgColor: 'bg-blue',
     cardClass: 'status-card-blue',
   },
   {
     title: 'Refusées',
-    value: stats.orders.refused,
+    value: stats.value.orders.refused,
     icon: 'fas fa-times-circle',
     bgColor: 'bg-red',
     cardClass: 'status-card-red',
   },
 ])
-
-// Gestion de la modal
-const selectedOrder = ref<Order | null>(null)
-const showRefusalModal = ref(false)
-const refusalOrder = ref<Order | null>(null)
-const refusalReason = ref('')
 
 // Fonctions utilitaires
 const formatCurrency = (amount: number) => {
@@ -675,174 +538,76 @@ const formatDateTime = (dateString: string) => {
   return date.toLocaleString('fr-FR')
 }
 
-// Gestion des statuts
+// Gestion des statuts - Mêmes fonctions que Commandes.vue
 const getStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
     pending: 'En attente',
     accepted: 'Acceptée',
-    in_pickup: 'Ramassage en cours',
-    processing: 'En traitement',
-    ready_for_delivery: 'Prête à livrer',
-    in_delivery: 'En livraison',
     completed: 'Terminée',
-    refused: 'Refusée',
+    refused: 'Refusée'
   }
   return labels[status] || status
 }
 
-const getStatusIcon = (status: string) => {
-  const icons: Record<string, string> = {
-    pending: 'fas fa-clock',
-    accepted: 'fas fa-check',
-    in_pickup: 'fas fa-truck-loading',
-    processing: 'fas fa-cog fa-spin',
-    ready_for_delivery: 'fas fa-box-open',
-    in_delivery: 'fas fa-shipping-fast',
-    completed: 'fas fa-flag-checkered',
-    refused: 'fas fa-times',
+// NOUVELLE FONCTION : Utilise les services dynamiques de Services.vue
+const getServiceLabel = (serviceType: string) => {
+  // Si c'est un ID de service, chercher le nom correspondant
+  if (serviceType.startsWith('SRV')) {
+    const service = services.value.find(s => s.id === serviceType)
+    return service ? service.name : serviceType
   }
-  return icons[status] || 'fas fa-question'
+  
+  // Fallback pour les anciens types de service
+  const labels: Record<string, string> = {
+    dry_cleaning: 'Nettoyage à sec',
+    express: 'Express',
+    delicate: 'Lavage délicat',
+    standard: 'Standard'
+  }
+  return labels[serviceType] || serviceType
 }
 
 const getStatusBadgeClass = (status: string) => {
   const classes: Record<string, string> = {
     pending: 'badge-orange',
     accepted: 'badge-green',
-    in_pickup: 'badge-cyan',
-    processing: 'badge-purple',
-    ready_for_delivery: 'badge-yellow',
-    in_delivery: 'badge-blue',
     completed: 'badge-blue',
-    refused: 'badge-red',
+    refused: 'badge-red'
   }
   return classes[status] || ''
 }
 
-// Gestion des services
-const getServiceLabel = (serviceType: string) => {
-  const labels: Record<string, string> = {
-    dry_cleaning: 'Nettoyage à sec',
-    express: 'Express',
-    delicate: 'Lavage délicat',
-    standard: 'Standard',
-  }
-  return labels[serviceType] || serviceType
-}
-
-const getServiceIcon = (serviceType: string) => {
-  const icons: Record<string, string> = {
-    dry_cleaning: 'fas fa-wind',
-    express: 'fas fa-bolt',
-    delicate: 'fas fa-feather',
-    standard: 'fas fa-tint',
-  }
-  return icons[serviceType] || 'fas fa-question'
-}
-
+// NOUVELLE FONCTION : Badge cohérent avec Commandes.vue
 const getServiceBadgeClass = (serviceType: string) => {
-  const classes: Record<string, string> = {
-    dry_cleaning: 'badge-purple',
-    express: 'badge-yellow',
-    delicate: 'badge-pink',
-    standard: 'badge-cyan',
-  }
-  return classes[serviceType] || ''
+  // Tous les services ont maintenant la même classe de badge
+  return 'badge-blue'
 }
 
-// Helper functions for button labels and icons based on status
-const getProgressButtonLabel = (status: string) => {
-  const labels: Record<string, string> = {
-    accepted: 'Lancer le ramassage',
-    in_pickup: 'Colis reçu - Démarrer le traitement',
-    processing: 'Traitement terminé - Prêt pour livraison',
-    ready_for_delivery: 'Lancer la livraison',
-    in_delivery: 'Confirmer la livraison',
-  }
-  return labels[status] || 'Continuer'
-}
-
-const getProgressButtonIcon = (status: string) => {
+const getStatusIcon = (status: string) => {
   const icons: Record<string, string> = {
-    accepted: 'fas fa-truck-loading',
-    in_pickup: 'fas fa-box',
-    processing: 'fas fa-check-circle',
-    ready_for_delivery: 'fas fa-shipping-fast',
-    in_delivery: 'fas fa-flag-checkered',
+    pending: 'fas fa-clock',
+    accepted: 'fas fa-check',
+    completed: 'fas fa-flag-checkered',
+    refused: 'fas fa-times'
   }
-  return icons[status] || 'fas fa-arrow-right'
+  return icons[status] || 'fas fa-question'
 }
 
-// Logique de progression pour tous les statuts
-const progressOrderStatus = (order: Order) => {
-  if (!order) return
-  
-  const currentStatus = order.status
-  if (!order.statusHistory) order.statusHistory = []
-
-  switch (currentStatus) {
-    case 'accepted':
-      order.status = 'in_pickup'
-      order.statusHistory.push({
-        status: 'in_pickup',
-        label: 'Ramassage en cours',
-        timestamp: new Date().toISOString()
-      })
-      break
-      
-    case 'in_pickup':
-      order.status = 'processing'
-      order.statusHistory.push({
-        status: 'processing',
-        label: 'En traitement',
-        timestamp: new Date().toISOString()
-      })
-      break
-      
-    case 'processing':
-      order.status = 'ready_for_delivery'
-      order.statusHistory.push({
-        status: 'ready_for_delivery',
-        label: 'Prête à livrer',
-        timestamp: new Date().toISOString()
-      })
-      break
-      
-    case 'ready_for_delivery':
-      order.status = 'in_delivery'
-      order.statusHistory.push({
-        status: 'in_delivery',
-        label: 'En livraison',
-        timestamp: new Date().toISOString()
-      })
-      break
-      
-    case 'in_delivery':
-      order.status = 'completed'
-      order.statusHistory.push({
-        status: 'completed',
-        label: 'Commande terminée',
-        timestamp: new Date().toISOString()
-      })
-      break
-      
-    default:
-      console.log('Statut non géré:', currentStatus)
-      return
-  }
-
-  console.log(`Commande passée de ${currentStatus} à ${order.status}`)
-  
-  // Sauvegarder les modifications dans localStorage
-  const allOrders = loadAllOrders()
-  const orderIndex = allOrders.findIndex(o => o.id === order.id)
-  if (orderIndex !== -1) {
-    allOrders[orderIndex] = order
-    localStorage.setItem('presso_orders', JSON.stringify(allOrders))
-  }
+// NOUVELLE FONCTION : Icône cohérente avec Commandes.vue
+const getServiceIcon = (serviceType: string) => {
+  // Icône unique pour tous les services
+  return 'fas fa-cogs'
 }
 
-// Gestion de la modal
-const viewOrder = (order: Order) => {
+// Fonction pour émettre l'événement de mise à jour du badge
+const emitOrderStatusChange = (orderId: string, newStatus: string) => {
+  window.dispatchEvent(new CustomEvent('orderStatusChanged', {
+    detail: { orderId, newStatus }
+  }))
+}
+
+// Gestion des commandes - Même logique que Commandes.vue
+const openOrderDetails = (order: Order) => {
   selectedOrder.value = order
 }
 
@@ -851,8 +616,7 @@ const closeOrderDetails = () => {
 }
 
 const acceptOrder = (orderId: string) => {
-  const allOrders = loadAllOrders()
-  const order = allOrders.find((o) => o.id === orderId)
+  const order = orders.value.find(o => o.id === orderId)
   if (order) {
     order.status = 'accepted'
     if (!order.statusHistory) order.statusHistory = []
@@ -861,19 +625,38 @@ const acceptOrder = (orderId: string) => {
       label: 'Commande acceptée',
       timestamp: new Date().toISOString()
     })
+    saveOrders()
+    showSuccessModal.value = true
+    successMessage.value = `La commande #${orderId} a été acceptée avec succès.`
     
-    // Sauvegarder les modifications
-    localStorage.setItem('presso_orders', JSON.stringify(allOrders))
-    
-    // Mettre à jour les statistiques
-    stats.orders.pending = Math.max(0, stats.orders.pending - 1)
-    stats.orders.accepted += 1
-    
-    console.log('Commande acceptée avec succès!')
+    // Émettre l'événement pour mettre à jour le badge
+    emitOrderStatusChange(orderId, 'accepted')
   }
 }
 
-// Fonctions pour le refus avec motif
+// Même logique simplifiée : passer directement à "terminée"
+const completeOrder = (order: Order) => {
+  if (!order) return
+  
+  if (!order.statusHistory) order.statusHistory = []
+  
+  order.status = 'completed'
+  order.statusHistory.push({
+    status: 'completed',
+    label: 'Commande terminée',
+    timestamp: new Date().toISOString()
+  })
+  
+  saveOrders()
+  showSuccessModal.value = true
+  successMessage.value = `La commande #${order.id} est maintenant terminée.`
+  
+  // Émettre l'événement pour mettre à jour le badge
+  emitOrderStatusChange(order.id, 'completed')
+  
+  closeOrderDetails()
+}
+
 const openRefusalModal = (order: Order) => {
   refusalOrder.value = order
   refusalReason.value = ''
@@ -888,19 +671,17 @@ const closeRefusalModal = () => {
 
 const confirmRefuseOrder = () => {
   if (refusalOrder.value && refusalReason.value.trim()) {
-    const allOrders = loadAllOrders()
-    const order = allOrders.find((o) => o.id === refusalOrder.value!.id)
+    const order = orders.value.find(o => o.id === refusalOrder.value!.id)
     if (order) {
       order.status = 'refused'
       order.refusalReason = refusalReason.value.trim()
       order.refusedAt = new Date().toISOString()
+      saveOrders()
+      showSuccessModal.value = true
+      successMessage.value = `La commande #${order.id} a été refusée avec succès.`
       
-      // Sauvegarder les modifications
-      localStorage.setItem('presso_orders', JSON.stringify(allOrders))
-      
-      // Mettre à jour les statistiques
-      stats.orders.pending = Math.max(0, stats.orders.pending - 1)
-      stats.orders.refused += 1
+      // Émettre l'événement pour mettre à jour le badge
+      emitOrderStatusChange(order.id, 'refused')
       
       closeRefusalModal()
       closeOrderDetails()
@@ -908,7 +689,73 @@ const confirmRefuseOrder = () => {
   }
 }
 
-// Initialisation
+// Gestion de la modale de succès
+const closeSuccessModal = () => {
+  showSuccessModal.value = false
+  successMessage.value = ''
+}
+
+// Fonctions de gestion des données - Même logique que Commandes.vue
+const saveOrders = () => {
+  localStorage.setItem('presso_orders', JSON.stringify(orders.value))
+  
+  // Émettre un event pour synchroniser avec d'autres pages
+  window.dispatchEvent(new CustomEvent('ordersUpdated', {
+    detail: { orders: orders.value }
+  }))
+}
+
+const loadOrders = () => {
+  const savedOrders = localStorage.getItem('presso_orders')
+  if (savedOrders) {
+    try {
+      orders.value = JSON.parse(savedOrders)
+    } catch (e) {
+      console.error('Erreur lors du chargement des commandes:', e)
+      orders.value = []
+      saveOrders()
+    }
+  } else {
+    orders.value = []
+    saveOrders()
+  }
+}
+
+// NOUVELLE FONCTION : Charger les services depuis Services.vue
+const loadServices = () => {
+  const savedServices = localStorage.getItem('presso_services')
+  if (savedServices) {
+    try {
+      services.value = JSON.parse(savedServices)
+    } catch (e) {
+      console.error('Erreur lors du chargement des services:', e)
+      services.value = []
+    }
+  } else {
+    services.value = []
+  }
+}
+
+// Écouter les événements de synchronisation
+const handleOrderStatusChange = (event: CustomEvent) => {
+  const { orderId, newStatus } = event.detail
+  const order = orders.value.find(o => o.id === orderId)
+  if (order) {
+    order.status = newStatus
+    saveOrders()
+  }
+}
+
+const handleOrdersUpdated = (event: CustomEvent) => {
+  orders.value = event.detail.orders
+}
+
+// NOUVEL ÉVÉNEMENT : Écouter les mises à jour des services
+const handleServicesUpdated = (event: CustomEvent) => {
+  const { services: updatedServices } = event.detail
+  services.value = updatedServices
+}
+
 onMounted(() => {
   // Charger les données utilisateur depuis le localStorage
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
@@ -916,13 +763,19 @@ onMounted(() => {
     user.value = currentUser
   }
 
-  // Mettre à jour les statistiques basées sur les commandes réelles
-  const allOrders = loadAllOrders()
-  stats.orders.pending = allOrders.filter(order => order.status === 'pending').length
-  stats.orders.accepted = allOrders.filter(order => order.status === 'accepted').length
-  stats.orders.completed = allOrders.filter(order => order.status === 'completed').length
-  stats.orders.refused = allOrders.filter(order => order.status === 'refused').length
-  stats.orders.total = allOrders.length
+  loadServices()
+  loadOrders()
+  
+  // Écouter les changements depuis d'autres pages
+  window.addEventListener('orderStatusChanged', handleOrderStatusChange as EventListener)
+  window.addEventListener('ordersUpdated', handleOrdersUpdated as EventListener)
+  window.addEventListener('servicesUpdated', handleServicesUpdated as EventListener)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('orderStatusChanged', handleOrderStatusChange as EventListener)
+  window.removeEventListener('ordersUpdated', handleOrdersUpdated as EventListener)
+  window.removeEventListener('servicesUpdated', handleServicesUpdated as EventListener)
 })
 </script>
 

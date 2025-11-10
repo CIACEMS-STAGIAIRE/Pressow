@@ -339,7 +339,9 @@ const togglePasswordVisibility = (): void => {
   showPassword.value = !showPassword.value
 }
 
+// NOUVELLE FONCTION : Navigation vers register avec stockage du mode
 const navigateToRegister = (): void => {
+  localStorage.setItem('authMode', 'register')
   router.push('/inscription')
 }
 
@@ -372,4 +374,4 @@ onMounted(() => {
 })
 </script>
 
-<style scoped src="@/Auth/Authentification.css"></style>
+<style src="@/Auth/Authentification.css"></style>

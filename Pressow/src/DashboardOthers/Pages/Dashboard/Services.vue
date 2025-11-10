@@ -7,7 +7,7 @@
           <h1 class="page-title">Mes Services</h1>
           <p class="page-description">Gérez les services que vous proposez à vos clients</p>
         </div>
-        <button @click="openModal()" class="btn-primary add-service-btn">
+        <button @click="openModal()" class="add-service-btn">
           <i class="fas fa-plus icon"></i>
           Ajouter un service
         </button>
@@ -24,9 +24,9 @@
           <div class="service-header-content">
             <div class="service-title-section">
               <h3 class="service-name">{{ service.name }}</h3>
-              <span :class="getCategoryBadgeClass(service.category)">
-                <i :class="getCategoryIcon(service.category) + ' badge-icon'"></i>
-                {{ getCategoryLabel(service.category) }}
+              <span class="badge-blue">
+                <i class="fas fa-cogs badge-icon"></i>
+                Service personnalisé
               </span>
             </div>
             <div class="toggle-container">
@@ -120,7 +120,7 @@
         <div class="modal-scroll-area">
           <form @submit.prevent="handleSubmit" class="service-form">
             <div class="form-grid">
-              <div class="form-group">
+              <div class="form-group full-width">
                 <label for="name" class="form-label">
                   <i class="fas fa-tag form-label-icon"></i>
                   Nom du service
@@ -129,7 +129,7 @@
                 <input 
                   id="name" 
                   v-model="formData.name" 
-                  placeholder="Ex: Nettoyage à sec" 
+                  placeholder="Ex: Nettoyage à sec, Repassage express..." 
                   class="form-input"
                   :class="{ 'form-input-error': errors.name }"
                   @blur="validateField('name')"
@@ -138,31 +138,6 @@
                 <div v-if="errors.name" class="error-message">
                   <i class="fas fa-exclamation-circle error-icon"></i>
                   {{ errors.name }}
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="category" class="form-label">
-                  <i class="fas fa-layer-group form-label-icon"></i>
-                  Catégorie
-                  <span class="required-asterisk">*</span>
-                </label>
-                <select 
-                  v-model="formData.category" 
-                  class="form-select"
-                  :class="{ 'form-input-error': errors.category }"
-                  @blur="validateField('category')"
-                  @change="clearError('category')"
-                >
-                  <option value="">Sélectionnez une catégorie</option>
-                  <option value="pressing">Pressing</option>
-                  <option value="blanchisserie">Blanchisserie</option>
-                  <option value="laverie">Laverie</option>
-                  <option value="fanico">Fanico</option>
-                </select>
-                <div v-if="errors.category" class="error-message">
-                  <i class="fas fa-exclamation-circle error-icon"></i>
-                  {{ errors.category }}
                 </div>
               </div>
 
@@ -199,7 +174,7 @@
                 <input
                   id="duration"
                   v-model="formData.duration"
-                  placeholder="Ex: 24h, 2-3h"
+                  placeholder="Ex: 24h, 2-3h, 48h..."
                   class="form-input"
                   :class="{ 'form-input-error': errors.duration }"
                   @blur="validateField('duration')"
@@ -220,7 +195,7 @@
                 <textarea
                   id="description"
                   v-model="formData.description"
-                  placeholder="Décrivez votre service..."
+                  placeholder="Décrivez votre service en détail..."
                   rows="3"
                   class="form-textarea"
                 ></textarea>
@@ -319,39 +294,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, nextTick } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue'
 import DashboardLayout from '@/DashboardOthers/Components/DashboardLayout.vue'
 
 // Données réactives
-const services = ref([
-  {
-    id: 'SRV001',
-    name: 'Nettoyage à sec',
-    category: 'pressing',
-    price: 12.0,
-    duration: '48h',
-    description: 'Nettoyage professionnel à sec pour tous types de vêtements',
-    active: true,
-  },
-  {
-    id: 'SRV002',
-    name: 'Repassage',
-    category: 'pressing',
-    price: 8.0,
-    duration: '24h',
-    description: 'Repassage soigné et professionnel',
-    active: true,
-  },
-  {
-    id: 'SRV003',
-    name: 'Lavage et repassage',
-    category: 'laverie',
-    price: 15.0,
-    duration: '48h',
-    description: 'Service complet de lavage et repassage',
-    active: true,
-  },
-])
+const services = ref([])
 
 const isModalOpen = ref(false)
 const editingService = ref(null)
@@ -362,7 +309,6 @@ const successMessage = ref('')
 
 const formData = reactive({
   name: '',
-  category: '',
   price: '', // Toujours stocker comme string pour éviter les problèmes de .trim()
   duration: '',
   description: '',
@@ -371,7 +317,6 @@ const formData = reactive({
 
 const errors = reactive({
   name: '',
-  category: '',
   price: '',
   duration: '',
 })
@@ -379,12 +324,67 @@ const errors = reactive({
 // Computed properties - CORRIGÉ
 const isFormValid = computed(() => {
   const nameValid = formData.name.trim() !== '' && !errors.name
-  const categoryValid = formData.category.trim() !== '' && !errors.category
   const priceValid = formData.price.toString().trim() !== '' && !errors.price // Convertir en string pour .trim()
   const durationValid = formData.duration.trim() !== '' && !errors.duration
   
-  return nameValid && categoryValid && priceValid && durationValid
+  return nameValid && priceValid && durationValid
 })
+
+// Charger les services au montage
+const loadServices = () => {
+  const savedServices = localStorage.getItem('presso_services')
+  if (savedServices) {
+    try {
+      services.value = JSON.parse(savedServices)
+    } catch (e) {
+      console.error('Erreur lors du chargement des services:', e)
+      // Services par défaut si aucun n'est trouvé
+      services.value = getDefaultServices()
+      saveServices()
+    }
+  } else {
+    services.value = getDefaultServices()
+    saveServices()
+  }
+}
+
+const saveServices = () => {
+  localStorage.setItem('presso_services', JSON.stringify(services.value))
+  
+  // Émettre un événement pour informer les autres composants de la mise à jour
+  window.dispatchEvent(new CustomEvent('servicesUpdated', {
+    detail: { services: services.value }
+  }))
+}
+
+const getDefaultServices = () => {
+  return [
+    {
+      id: 'SRV001',
+      name: 'Nettoyage à sec',
+      price: 12.0,
+      duration: '48h',
+      description: 'Nettoyage professionnel à sec pour tous types de vêtements',
+      active: true,
+    },
+    {
+      id: 'SRV002',
+      name: 'Repassage',
+      price: 8.0,
+      duration: '24h',
+      description: 'Repassage soigné et professionnel',
+      active: true,
+    },
+    {
+      id: 'SRV003',
+      name: 'Lavage et repassage',
+      price: 15.0,
+      duration: '48h',
+      description: 'Service complet de lavage et repassage',
+      active: true,
+    },
+  ]
+}
 
 // Watchers
 watch(isModalOpen, (newVal) => {
@@ -413,14 +413,6 @@ const validateField = (fieldName) => {
         errors.name = 'Le nom doit contenir au moins 2 caractères'
       } else {
         errors.name = ''
-      }
-      break
-      
-    case 'category':
-      if (!value.trim()) {
-        errors.category = 'La catégorie est obligatoire'
-      } else {
-        errors.category = ''
       }
       break
       
@@ -457,14 +449,12 @@ const clearError = (fieldName) => {
 const validateForm = () => {
   // Valider tous les champs
   validateField('name')
-  validateField('category')
   validateField('price')
   validateField('duration')
   
   // Vérifier s'il n'y a pas d'erreurs et que tous les champs sont remplis
   const hasErrors = Object.values(errors).some(error => error !== '')
   const allFieldsFilled = formData.name.trim() && 
-                         formData.category.trim() && 
                          formData.price.toString().trim() && // Convertir en string pour .trim()
                          formData.duration.trim()
   
@@ -475,7 +465,6 @@ const openModal = (service = null) => {
   if (service) {
     editingService.value = service
     formData.name = service.name
-    formData.category = service.category
     formData.price = service.price.toString() // S'assurer que c'est une string
     formData.duration = service.duration
     formData.description = service.description
@@ -483,7 +472,6 @@ const openModal = (service = null) => {
   } else {
     editingService.value = null
     formData.name = ''
-    formData.category = ''
     formData.price = ''
     formData.duration = ''
     formData.description = ''
@@ -517,7 +505,6 @@ const handleSubmit = async () => {
   
   // Forcer la validation de tous les champs
   validateField('name')
-  validateField('category')
   validateField('price')
   validateField('duration')
   
@@ -540,7 +527,6 @@ const handleSubmit = async () => {
       services.value[index] = {
         ...services.value[index],
         name: formData.name.trim(),
-        category: formData.category,
         price: parseFloat(formData.price), // Convertir en number pour le stockage
         duration: formData.duration.trim(),
         description: finalDescription,
@@ -552,7 +538,6 @@ const handleSubmit = async () => {
     const newService = {
       id: 'SRV' + String(services.value.length + 1).padStart(3, '0'),
       name: formData.name.trim(),
-      category: formData.category,
       price: parseFloat(formData.price), // Convertir en number pour le stockage
       duration: formData.duration.trim(),
       description: finalDescription,
@@ -561,6 +546,8 @@ const handleSubmit = async () => {
     services.value.push(newService)
     showNotification('Service ajouté avec succès!')
   }
+  
+  saveServices() // Sauvegarder et émettre l'événement
   closeModal()
 }
 
@@ -578,6 +565,7 @@ const deleteService = () => {
   if (serviceToDelete.value) {
     services.value = services.value.filter(s => s.id !== serviceToDelete.value.id)
     showNotification('Service supprimé avec succès!')
+    saveServices() // Sauvegarder et émettre l'événement
   }
   cancelDelete()
 }
@@ -588,6 +576,7 @@ const toggleActive = (serviceId) => {
     service.active = !service.active
     const action = service.active ? 'activé' : 'désactivé'
     showNotification(`Service ${action} avec succès!`)
+    saveServices() // Sauvegarder et émettre l'événement
   }
 }
 
@@ -598,36 +587,6 @@ const showNotification = (message, type = 'success') => {
   setTimeout(() => {
     showSuccessMessage.value = false
   }, 4000)
-}
-
-const getCategoryLabel = (category) => {
-  const labels = {
-    pressing: 'Pressing',
-    blanchisserie: 'Blanchisserie',
-    laverie: 'Laverie',
-    fanico: 'Fanico',
-  }
-  return labels[category] || category
-}
-
-const getCategoryBadgeClass = (category) => {
-  const classes = {
-    pressing: 'badge-blue',
-    blanchisserie: 'badge-purple',
-    laverie: 'badge-green',
-    fanico: 'badge-orange',
-  }
-  return classes[category] || ''
-}
-
-const getCategoryIcon = (category) => {
-  const icons = {
-    pressing: 'fas fa-shirt',
-    blanchisserie: 'fas fa-wind',
-    laverie: 'fas fa-soap',
-    fanico: 'fas fa-fire',
-  }
-  return icons[category] || 'fas fa-layer-group'
 }
 
 // Fonction utilitaire pour convertir en string si nécessaire
@@ -645,6 +604,11 @@ watch(errors, (newVal) => {
   console.log('errors changé:', newVal)
   console.log('isFormValid:', isFormValid.value)
 }, { deep: true })
+
+// Charger les services au montage du composant
+onMounted(() => {
+  loadServices()
+})
 </script>
 
 <style scoped src="@/DashboardOthers/Assets/Styles/Services.css"></style>
