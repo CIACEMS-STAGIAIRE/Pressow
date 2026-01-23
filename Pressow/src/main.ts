@@ -14,7 +14,8 @@ app.use(pinia)
 app.use(router)
 app.use(Vueform, vueformConfig)
 
+// Initialiser l'auth AVANT de monter l'application
 const authStore = useAuthStore(pinia)
-authStore.initAuth()
-
-app.mount('#app')
+authStore.initAuth().finally(() => {
+  app.mount('#app')
+})

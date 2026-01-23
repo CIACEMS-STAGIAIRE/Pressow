@@ -60,7 +60,10 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         await Promise.race([
-          this.refreshAccessToken().then(() => undefined).catch(() => undefined),
+          this.refreshAccessToken().then(() => undefined).catch(() => {
+            // Si le refresh échoue (401, etc.), nettoyer la session
+            this.clearSession()
+          }),
           timeoutPromise,
         ])
       } finally {
@@ -78,6 +81,8 @@ export const useAuthStore = defineStore('auth', {
       })
       this.setAccessToken(data.access)
       this.setUser(data.user)
+      // Marquer l'auth comme prête après une connexion réussie
+      this.authReady = true
       return data
     },
     async registerProvider(payload: RegisterProviderPayload) {
@@ -118,6 +123,8 @@ export const useAuthStore = defineStore('auth', {
       this.setAccessToken(data.access)
       this.setUser(data.user)
       this.setPendingToken(null)
+      // Marquer l'auth comme prête après une vérification OTP réussie
+      this.authReady = true
       return data
     },
     async refreshAccessToken() {

@@ -7,12 +7,8 @@
           <img src="/logo_v2_r.png" alt="Pressow" class="header-logo">
         </router-link>
         <div class="header-actions">
-          <router-link to="/Connexion">
-            <button class="BtnGlobal1">Connexion</button>
-          </router-link>
-          <router-link to="/Inscription">
-            <button class="BtnGlobal2">S'inscrire</button>
-          </router-link>
+          <router-link to="/Connexion" class="BtnGlobal1">Connexion</router-link>
+          <router-link to="/Inscription" class="BtnGlobal2">S'inscrire</router-link>
         </div>
       </div>
     </header>
@@ -70,16 +66,14 @@
           </p>
 
           <div class="hero-actions">
-            <router-link to="/Inscription"><button class="BtnGlobal2" @click="navigateToAuth('register')">
-                <span class="btn-content">
-                  Commencer maintenant <i class="fas fa-arrow-right"></i>
-                </span>
-                <div class="btn-shine"></div>
-              </button>
+            <router-link to="/Inscription" class="BtnGlobal2 hero-btn">
+              <span class="btn-content">
+                Commencer maintenant <i class="fas fa-arrow-right"></i>
+              </span>
+              <div class="btn-shine"></div>
             </router-link>
 
-            <router-link to="/Connexion"><button class="BtnGlobal1" @click="navigateToAuth('login')">Déjà inscrit
-                ?</button></router-link>
+            <router-link to="/Connexion" class="BtnGlobal1 hero-btn">Déjà inscrit ?</router-link>
           </div>
 
           <!-- Animated Stats -->
@@ -223,8 +217,9 @@
         <p class="cta-description">
           Inscrivez-vous dès maintenant et commencez à recevoir des commandes en quelques minutes
         </p>
-        <router-link to="/Inscription"><button class="BtnGlobal2 cta-button" @click="navigateToAuth('register')">
-            Créer mon compte gratuitement <i class="fas fa-rocket"></i> </button></router-link>
+        <router-link to="/Inscription" class="BtnGlobal2 cta-button">
+          Créer mon compte gratuitement <i class="fas fa-rocket"></i>
+        </router-link>
       </div>
     </section>
 
@@ -318,9 +313,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
 
 // État du scroll pour le header
 const isScrolled = ref(false)
@@ -402,13 +394,6 @@ const stats = ref([
   { icon: 'fas fa-star', number: '98', label: 'Taux de satisfaction' },
   { icon: 'fas fa-map-marker-alt', number: '50', label: 'Villes couvertes' },
 ])
-
-// Methods
-const navigateToAuth = (mode: string) => {
-  // Stocker le mode dans le localStorage pour la page d'authentification
-  localStorage.setItem('authMode', mode)
-  router.push('/connexion')
-}
 
 // Animation pour les compteurs
 let animationFrameId: number
