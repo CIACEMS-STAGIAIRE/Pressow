@@ -1,19 +1,17 @@
 <template>
   <div class="landing-page">
-    <!-- Header -->
-    <header class="header">
+    <!-- Header moderne avec effet scroll -->
+    <header class="header" :class="{ scrolled: isScrolled }">
       <div class="header-content">
-        <div class="logo-container">
-          <div class="logo-icon">
-            <i class="fas fa-tshirt"></i>
-          </div>
-          <span class="logo-text">PressoW</span>
-        </div>
+        <router-link to="/" class="logo-container">
+          <img src="/logo_v2_r.png" alt="Pressow" class="header-logo">
+        </router-link>
         <div class="header-actions">
-          <router-link to="/Connexion"><button class="BtnGlobal1" @click="navigateToAuth('login')">Connexion</button>
+          <router-link to="/Connexion">
+            <button class="BtnGlobal1">Connexion</button>
           </router-link>
-          <router-link to="/Inscription"><button class="BtnGlobal2"
-              @click="navigateToAuth('register')">S'inscrire</button>
+          <router-link to="/Inscription">
+            <button class="BtnGlobal2">S'inscrire</button>
           </router-link>
         </div>
       </div>
@@ -324,6 +322,13 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
+// État du scroll pour le header
+const isScrolled = ref(false)
+
+const handleScroll = () => {
+  isScrolled.value = window.scrollY > 50
+}
+
 // Data
 const features = ref([
   {
@@ -444,6 +449,10 @@ const animateCounters = () => {
 let observer: IntersectionObserver | null = null
 
 onMounted(() => {
+  // Écouteur de scroll pour le header
+  window.addEventListener('scroll', handleScroll)
+  handleScroll() // Vérifier l'état initial
+
   // Configurer l'Intersection Observer
   observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
@@ -470,6 +479,9 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  // Supprimer l'écouteur de scroll
+  window.removeEventListener('scroll', handleScroll)
+  
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId)
   }
@@ -479,4 +491,4 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped src="@/Views/Accueil/Accueil.css"></style>
+<style scoped src="@/Assets/AssetsCommun/Accueil.css"></style>

@@ -1,196 +1,343 @@
-<template>
-  <div class="auth-page">
-    <div class="auth-container">
-      <router-link to="/">
-        <button class="back-button" @click="goBack">
-          <i class="fas fa-arrow-left"></i>
-          <span>Retour à l'accueil</span>
-        </button>
-      </router-link>
-
-      <!-- Notifications -->
-      <div v-for="(notification, index) in notifications" :key="index" class="notification" :class="notification.type">
-        <div class="notification-content">
-          <i :class="notification.type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'"></i>
-          <div>
-            <strong>{{ notification.title }}</strong>
-            <p>{{ notification.message }}</p>
-          </div>
-        </div>
-        <button @click="removeNotification(notification)" class="notification-close">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-
-      <!-- Bouton pour rouvrir le modal OTP -->
-      <div v-if="showReopenOtpButton" class="reopen-otp-container">
-        <button class="reopen-otp-btn" @click="reopenOtpModal">
-          <i class="fas fa-key"></i>
-          <span>Réouvrir la vérification OTP</span>
-        </button>
-      </div>
-
-      <div class="auth-card">
-        <div class="auth-header">
-          <div class="auth-title">
-            <span class="title-text">Inscription</span>
-          </div>
-          <p class="auth-description">
-            Créez votre compte prestataire
-          </p>
-        </div>
-        <div class="auth-content">
-          <form @submit.prevent="handleSubmit" class="auth-form">
-            <div class="form-group-Section">
-              <div class="form-section">
-                <div class="form-group fade-in">
-                  <label for="name" class="form-label">Nom complet</label>
-                  <div class="input-wrapper">
-                    <i class="fas fa-user input-icon"></i>
-                    <input id="name" name="name" v-model="formData.name" placeholder="Jean Dupont" required
-                      class="form-input" />
-                  </div>
-                </div>
-
-                <div class="form-group fade-in">
-                  <label for="companyName" class="form-label">Nom de l'entreprise</label>
-                  <div class="input-wrapper">
-                    <i class="fas fa-building input-icon"></i>
-                    <input id="companyName" name="companyName" v-model="formData.companyName"
-                      placeholder="Ex: Pressing Jean" required class="form-input" />
-                  </div>
-                </div>
-
-                <div class="form-group fade-in">
-                  <label for="serviceType" class="form-label">Type de service</label>
-                  <div class="select-wrapper">
-                    <i class="fas fa-concierge-bell input-icon"></i>
-                    <select id="serviceType" v-model="formData.serviceType" required class="form-select">
-                      <option value="" disabled>Sélectionnez votre type de service</option>
-                      <option v-for="service in serviceTypes" :key="service.value" :value="service.value">
-                        {{ service.label }}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-group fade-in">
-                <label for="email" class="form-label">
-                  Adresse email <span class="optional-label">(facultatif)</span>
-                </label>
-                <div class="input-wrapper">
-                  <i class="fas fa-envelope input-icon"></i>
-                  <input id="email" name="email" type="email" v-model="formData.email"
-                    placeholder="jean.dupont@example.com" class="form-input" />
-                </div>
-              </div>
-
-              <div class="form-group slide-in">
-                <label for="phone" class="form-label">Numéro de téléphone</label>
-                <div class="input-wrapper">
-                  <i class="fas fa-phone input-icon"></i>
-                  <input id="phone" name="phone" type="tel" v-model="formData.phone" placeholder="+33612345678" required
-                    class="form-input" />
-                </div>
-              </div>
-
-              <div class="form-group slide-in">
-                <label for="password" class="form-label">Mot de passe</label>
-                <div class="input-wrapper">
-                  <i class="fas fa-lock input-icon"></i>
-                  <input id="password" name="password" :type="showPassword ? 'text' : 'password'"
-                    v-model="formData.password" placeholder="••••••••" required class="form-input password-input" />
-                  <button type="button" @click="togglePasswordVisibility" class="password-toggle">
-                    <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-                  </button>
-                </div>
-              </div>
-
-              <div class="form-group fade-in">
-                <label for="confirmPassword" class="form-label">Confirmer le mot de passe</label>
-                <div class="input-wrapper">
-                  <i class="fas fa-lock input-icon"></i>
-                  <input id="confirmPassword" name="confirmPassword" :type="showConfirmPassword ? 'text' : 'password'"
-                    v-model="formData.confirmPassword" placeholder="••••••••" required class="form-input password-input"
-                    :class="{ error: formData.confirmPassword && !passwordsMatch }" />
-                  <button type="button" @click="toggleConfirmPasswordVisibility" class="password-toggle">
-                    <i :class="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-                  </button>
-                </div>
-                <div v-if="formData.confirmPassword && !passwordsMatch" class="error-message">
-                  <i class="fas fa-exclamation-circle"></i>
-                  Les mots de passe ne correspondent pas
-                </div>
-              </div>
-
-              <!-- CHAMP VILLE MODIFIÉ : Input text avec suggestions -->
-              <div class="form-group fade-in">
-                <label for="city" class="form-label">Ville</label>
-                <div class="input-wrapper">
-                  <i class="fas fa-map-marker-alt input-icon"></i>
-                  <input 
-                    id="city" 
-                    name="city" 
-                    v-model="formData.city" 
-                    @input="onCityInput"
-                    @focus="showCitySuggestions = true"
-                    @blur="onCityBlur"
-                    placeholder="Commencez à taper le nom de votre ville..."
-                    required 
-                    class="form-input" 
-                    list="citySuggestions"
-                    autocomplete="off"
-                  />
-                  <!-- Liste des suggestions -->
-                  <div v-if="showCitySuggestions && filteredCities.length > 0" class="city-suggestions">
-                    <div 
-                      v-for="city in filteredCities" 
-                      :key="city.name"
-                      @mousedown="selectCity(city.name)"
-                      class="suggestion-item"
-                    >
-                      <i class="fas fa-map-marker-alt suggestion-icon"></i>
-                      <span class="suggestion-text">{{ city.name }}</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="input-hint">
-                  <i class="fas fa-info-circle"></i>
-                  Sélectionnez une ville dans la liste ou tapez le nom de votre ville
-                </div>
-              </div>
-            </div>
-
-            <div class="submit-button-container">
-              <button type="submit" class="submit-button" :class="{ pulse: !formValid, glow: formValid }"
-              :disabled="!formValid || isLoading">
-              <span class="button-content">
-                <template v-if="isLoading">
-                  <i class="fas fa-spinner fa-spin"></i>
-                  Chargement...
-                </template>
-                <template v-else>
-                  S'inscrire
-                  <i class="fas fa-arrow-right button-icon"></i>
-                </template>
-              </span>
-              <div class="button-shine"></div>
-            </button>
-            </div>
-          </form>
-
-          <div class="toggle-mode">
-            <button @click="navigateToLogin" class="toggle-button">
-              <span class="toggle-text">
-                Déjà un compte ? Se connecter
-              </span>
-              <i class="fas fa-arrow-right toggle-icon"></i>
-            </button>
-          </div>
+a<template>
+  <div class="presso-auth-page">
+    <!-- Notifications -->
+    <div v-for="(notification, index) in notifications" :key="index" class="presso-notification" :class="notification.type">
+      <div class="notification-content">
+        <i :class="notification.type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'"></i>
+        <div>
+          <strong>{{ notification.title }}</strong>
+          <p>{{ notification.message }}</p>
         </div>
       </div>
+      <button @click="removeNotification(notification)" class="notification-close">
+        <i class="fas fa-times"></i>
+      </button>
     </div>
+
+    <!-- Bouton pour rouvrir le modal OTP -->
+    <div v-if="showReopenOtpButton" class="reopen-otp-container">
+      <button class="reopen-otp-btn" @click="reopenOtpModal">
+        <i class="fas fa-key"></i>
+        <span>Réouvrir la vérification OTP</span>
+      </button>
+    </div>
+
+    <!-- Header avec logo (style Upwork) -->
+    <header class="presso-header">
+      <router-link to="/" class="logo-link">
+        <img src="/logo_v2_r.png" alt="Pressow" class="logo" />
+      </router-link>
+    </header>
+
+    <!-- Contenu principal -->
+    <main class="presso-main">
+      <!-- Étape 1: Sélection du type de compte (style Upwork) -->
+      <div v-if="!accountType" class="account-selection">
+        <h1 class="selection-title">Rejoindre en tant que prestataire ou client</h1>
+        
+        <div class="account-cards">
+          <!-- Card Prestataire -->
+          <div 
+            class="account-card" 
+            :class="{ selected: selectedType === 'provider' }"
+            @click="selectedType = 'provider'"
+          >
+            <div class="card-icon">
+              <i class="fas fa-store"></i>
+            </div>
+            <div class="card-radio">
+              <span class="radio-circle" :class="{ checked: selectedType === 'provider' }"></span>
+            </div>
+            <div class="card-content">
+              <span class="card-title">Je suis un prestataire,</span>
+              <span class="card-subtitle">j'offre des services de pressing</span>
+            </div>
+          </div>
+
+          <!-- Card Client -->
+          <div 
+            class="account-card" 
+            :class="{ selected: selectedType === 'client' }"
+            @click="selectedType = 'client'"
+          >
+            <div class="card-icon">
+              <i class="fas fa-user"></i>
+            </div>
+            <div class="card-radio">
+              <span class="radio-circle" :class="{ checked: selectedType === 'client' }"></span>
+            </div>
+            <div class="card-content">
+              <span class="card-title">Je suis un client,</span>
+              <span class="card-subtitle">je recherche un service</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bouton Créer un compte -->
+        <button 
+          class="create-account-btn" 
+          :class="{ active: selectedType }"
+          :disabled="!selectedType"
+          @click="setAccountType(selectedType)"
+        >
+          Créer un compte
+        </button>
+
+        <!-- Lien vers connexion -->
+        <p class="login-text">
+          Vous avez déjà un compte ? 
+          <router-link to="/Connexion" class="login-link">Se connecter</router-link>
+        </p>
+      </div>
+
+      <!-- Étape 2: Formulaire d'inscription -->
+      <div v-else class="form-container">
+        <!-- Bouton retour -->
+        <button class="back-btn" @click="setAccountType('')">
+          <i class="fas fa-arrow-left"></i>
+          Retour
+        </button>
+
+        <!-- Formulaire Prestataire avec Vueform -->
+        <Vueform
+          v-if="accountType === 'provider'"
+          ref="providerForm$"
+          :display-errors="false"
+          :endpoint="false"
+          @submit="handleProviderSubmit"
+          class="presso-vueform"
+        >
+          <StaticElement
+            name="title"
+            content="Inscription Prestataire"
+            tag="h1"
+            :attrs="{ class: 'form-title' }"
+          />
+          <StaticElement name="divider1" tag="hr" :attrs="{ class: 'form-divider' }" />
+
+          <!-- Nom complet + Entreprise -->
+          <GroupElement name="identity" description="Assurez-vous que les informations correspondent à votre identité légale">
+            <TextElement
+              name="name"
+              placeholder="Nom complet"
+              field-name="Nom complet"
+              :columns="{ container: 6, label: 12, wrapper: 12 }"
+              :rules="['required', 'max:255']"
+            />
+            <TextElement
+              name="company_name"
+              placeholder="Nom de l'entreprise"
+              field-name="Entreprise"
+              :columns="{ container: 6, label: 12, wrapper: 12 }"
+              :rules="['required', 'max:255']"
+            />
+          </GroupElement>
+
+          <!-- Type de service + Ville -->
+          <GroupElement name="location">
+            <SelectElement
+              name="service_type"
+              placeholder="Type de service"
+              field-name="Type de service"
+              :native="false"
+              :search="true"
+              :items="serviceTypeItems"
+              :columns="{ container: 6, label: 12, wrapper: 12 }"
+              :rules="['required']"
+            />
+            <SelectElement
+              name="city"
+              placeholder="Ville"
+              field-name="Ville"
+              :native="false"
+              :search="true"
+              input-type="search"
+              :items="cityItems"
+              :columns="{ container: 6, label: 12, wrapper: 12 }"
+              :rules="['required']"
+            />
+          </GroupElement>
+
+          <!-- Téléphone + Email -->
+          <GroupElement name="contact" description="L'email est facultatif mais recommandé">
+            <TextElement
+              name="phone"
+              input-type="tel"
+              placeholder="Téléphone (ex: 0712345678)"
+              field-name="Téléphone"
+              :columns="{ container: 6, label: 12, wrapper: 12 }"
+              :rules="['required', 'min:8', 'max:15']"
+              :addons="{ before: '+225' }"
+            />
+            <TextElement
+              name="email"
+              input-type="email"
+              placeholder="Email (facultatif)"
+              field-name="Email"
+              :columns="{ container: 6, label: 12, wrapper: 12 }"
+              :rules="['nullable', 'email', 'max:255']"
+            />
+          </GroupElement>
+
+          <!-- Mot de passe -->
+          <TextElement
+            name="password"
+            input-type="password"
+            placeholder="Mot de passe"
+            field-name="Mot de passe"
+            description="Minimum 8 caractères"
+            :rules="['required', 'min:8']"
+          />
+          
+          <!-- Confirmation mot de passe -->
+          <TextElement
+            name="password_confirm"
+            input-type="password"
+            placeholder="Confirmer le mot de passe"
+            field-name="Confirmation"
+            :rules="['required', 'same:password']"
+          />
+
+          <StaticElement name="divider2" tag="hr" :attrs="{ class: 'form-divider' }" />
+
+          <!-- CGU -->
+          <CheckboxElement name="terms" :rules="['accepted']">
+            <template #default>
+              J'accepte les <a href="#" class="link">Conditions d'utilisation</a> et la <a href="#" class="link">Politique de confidentialité</a>
+            </template>
+          </CheckboxElement>
+
+          <CheckboxElement name="marketing">
+            <template #default>
+              Je souhaite recevoir des offres et actualités par email
+            </template>
+          </CheckboxElement>
+
+          <StaticElement name="divider3" tag="hr" :attrs="{ class: 'form-divider' }" />
+
+          <!-- Submit -->
+          <ButtonElement
+            name="submit"
+            :submits="true"
+            :button-label="isLoading ? 'Création en cours...' : 'Créer mon compte'"
+            :full="true"
+            size="lg"
+            :loading="isLoading"
+            :disabled="isLoading"
+          />
+        </Vueform>
+
+        <!-- Formulaire Client avec Vueform -->
+        <Vueform
+          v-else-if="accountType === 'client'"
+          ref="clientForm$"
+          :display-errors="false"
+          :endpoint="false"
+          @submit="handleClientSubmit"
+          class="presso-vueform"
+        >
+          <StaticElement
+            name="title"
+            content="Inscription Client"
+            tag="h1"
+            :attrs="{ class: 'form-title' }"
+          />
+          <StaticElement name="divider1" tag="hr" :attrs="{ class: 'form-divider' }" />
+
+          <!-- Prénom & Nom -->
+          <GroupElement name="names" description="Assurez-vous qu'il correspond à votre nom légal">
+            <TextElement
+              name="first_name"
+              placeholder="Prénom"
+              field-name="Prénom"
+              :columns="{ container: 6, label: 12, wrapper: 12 }"
+              :rules="['required', 'max:255']"
+            />
+            <TextElement
+              name="last_name"
+              placeholder="Nom"
+              field-name="Nom"
+              :columns="{ container: 6, label: 12, wrapper: 12 }"
+              :rules="['required', 'max:255']"
+            />
+          </GroupElement>
+
+          <!-- Téléphone + Email -->
+          <GroupElement name="contact" description="L'email est facultatif mais recommandé">
+            <TextElement
+              name="phone"
+              input-type="tel"
+              placeholder="Téléphone (ex: 0712345678)"
+              field-name="Téléphone"
+              :columns="{ container: 6, label: 12, wrapper: 12 }"
+              :rules="['required', 'min:8', 'max:15']"
+              :addons="{ before: '+225' }"
+            />
+            <TextElement
+              name="email"
+              input-type="email"
+              placeholder="Email (facultatif)"
+              field-name="Email"
+              :columns="{ container: 6, label: 12, wrapper: 12 }"
+              :rules="['nullable', 'email', 'max:255']"
+            />
+          </GroupElement>
+
+          <!-- Mot de passe -->
+          <TextElement
+            name="password"
+            input-type="password"
+            placeholder="Mot de passe"
+            field-name="Mot de passe"
+            description="Minimum 8 caractères"
+            :rules="['required', 'min:8']"
+          />
+          
+          <!-- Confirmation mot de passe -->
+          <TextElement
+            name="password_confirm"
+            input-type="password"
+            placeholder="Confirmer le mot de passe"
+            field-name="Confirmation"
+            :rules="['required', 'same:password']"
+          />
+
+          <StaticElement name="divider2" tag="hr" :attrs="{ class: 'form-divider' }" />
+
+          <!-- CGU -->
+          <CheckboxElement name="terms" :rules="['accepted']">
+            <template #default>
+              J'accepte les <a href="#" class="link">Conditions d'utilisation</a> et la <a href="#" class="link">Politique de confidentialité</a>
+            </template>
+          </CheckboxElement>
+
+          <CheckboxElement name="marketing">
+            <template #default>
+              Je souhaite recevoir des offres et actualités par email
+            </template>
+          </CheckboxElement>
+
+          <StaticElement name="divider3" tag="hr" :attrs="{ class: 'form-divider' }" />
+
+          <!-- Submit -->
+          <ButtonElement
+            name="submit"
+            :submits="true"
+            :button-label="isLoading ? 'Création en cours...' : 'Créer mon compte'"
+            :full="true"
+            size="lg"
+            :loading="isLoading"
+            :disabled="isLoading"
+          />
+        </Vueform>
+
+        <!-- Lien vers connexion -->
+        <p class="login-text form-login">
+          Vous avez déjà un compte ? 
+          <router-link to="/Connexion" class="login-link">Se connecter</router-link>
+        </p>
+      </div>
+    </main>
 
     <!-- Modal OTP -->
     <div v-if="showOtpModal" class="otp-modal-overlay" @click.self="handleOverlayClick">
@@ -203,212 +350,118 @@
         </div>
 
         <div class="otp-modal-content">
-          <!-- Section simulation SMS -->
-              <div class="simulation-info">
-            <div class="simulation-badge">
+          <div class="otp-info">
+            <div class="otp-badge">
               <i class="fas fa-mobile-alt"></i>
-              <span>SIMULATION SMS</span>
+              <span>VÉRIFICATION SMS</span>
             </div>
-            <p class="simulation-text">
-              En production, un SMS serait envoyé au :
-            </p>
-            <div class="phone-number">
+            <p class="otp-text">Un code de vérification a été envoyé au :</p>
+            <div class="phone-display">
               <i class="fas fa-phone"></i>
-              <strong>{{ formData.phone }}</strong>
+              <strong>{{ submittedPhone }}</strong>
             </div>
           </div>
 
-          <!-- Code OTP affiché clairement -->
-          <div class="otp-display-section">
-            <h4>Code OTP de test :</h4>
-            <div class="otp-code-display" @click="copyOtpToClipboard">
-              <span class="otp-code">{{ generatedOtp }}</span>
-              <button class="copy-btn" title="Copier le code">
-                <i class="fas fa-copy"></i>
-                Copier
-              </button>
-            </div>
-            <small class="otp-hint">
-              <i class="fas fa-info-circle"></i>
-              Cliquez sur le code pour le copier
-            </small>
+          <div class="otp-input-wrapper">
+            <label class="otp-label">Entrez le code à 6 chiffres</label>
+            <input
+              type="text"
+              v-model="otpCode"
+              class="otp-input"
+              placeholder="000000"
+              maxlength="6"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              @input="onOtpInput"
+            />
           </div>
-
-          <!-- Champ de saisie -->
-          <form @submit.prevent="verifyOtp" class="otp-form">
-            <div class="form-group">
-              <label for="otpCode" class="form-label">Entrez le code OTP</label>
-              <div class="input-wrapper">
-                <i class="fas fa-shield-alt input-icon"></i>
-                <input id="otpCode" name="otpCode" v-model="otpCode" placeholder="123456" maxlength="6" required
-                  class="form-input otp-input" @input="onOtpInput" />
-              </div>
-              <div class="otp-timer">
-                <span v-if="otpTimer > 0">
-                  <i class="fas fa-clock"></i>
-                  Renvoyer le code dans {{ otpTimer }}s
-                </span>
-                <button v-else type="button" @click="resendOtp" class="resend-link">
-                  <i class="fas fa-redo"></i> Renvoyer le code
-                </button>
-              </div>
-            </div>
-          </form>
+          
+          <div class="otp-timer">
+            <span v-if="otpTimer > 0">
+              <i class="fas fa-clock"></i>
+              Renvoyer le code dans {{ otpTimer }}s
+            </span>
+            <button v-else type="button" @click="resendOtp" class="resend-link">
+              <i class="fas fa-redo"></i> Renvoyer le code
+            </button>
+          </div>
         </div>
 
-        <!-- Actions -->
         <div class="otp-actions">
           <button type="button" @click="cancelOtp" class="btn-secondary">
             <i class="fas fa-arrow-left"></i>
             Annuler
           </button>
-          <button type="submit" class="btn-primary" :class="{ glow: otpCode.length === 6 }"
-            :disabled="otpCode.length !== 6 || isLoading">
+          <button
+            type="button"
+            class="btn-primary"
+            :disabled="otpCode.length !== 6 || isLoading"
+            @click="verifyOtp"
+          >
             <template v-if="isLoading">
               <i class="fas fa-spinner fa-spin"></i>
               Vérification...
             </template>
             <template v-else>
               <i class="fas fa-check"></i>
-              Vérifier le code
+              Vérifier
             </template>
           </button>
         </div>
       </div>
     </div>
-
-    <!-- Enhanced Background Animation -->
-    <div class="auth-background">
-      <div class="floating-bubble bubble-1"></div>
-      <div class="floating-bubble bubble-2"></div>
-      <div class="floating-bubble bubble-3"></div>
-
-      <div class="floating-icon auth-icon-1">
-        <i class="fas fa-tshirt"></i>
-      </div>
-      <div class="floating-icon auth-icon-2">
-        <i class="fas fa-soap"></i>
-      </div>
-      <div class="floating-icon auth-icon-3">
-        <i class="fas fa-spray-can"></i>
-      </div>
-      <div class="floating-icon auth-icon-4">
-        <i class="fas fa-wind"></i>
-      </div>
-      <div class="floating-icon auth-icon-5">
-        <i class="fas fa-temperature-high"></i>
-      </div>
-      <div class="floating-icon auth-icon-6">
-        <i class="fas fa-water"></i>
-      </div>
-    </div>
-
-    <!-- Particles Background -->
-    <div class="particles-container">
-      <div v-for="i in 15" :key="i" class="particle" :style="particleStyle(i)"></div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import type { NotificationType } from '@/types/types'
 
 // ====================================================================
-// TYPES ET INTERFACES
+// TYPES
 // ====================================================================
-
-interface User {
-  id: string
-  name: string
-  displayName: string
-  first_name: string
-  last_name: string
-  companyName: string
-  phone: string
-  email: string
-  password: string
-  serviceType: string
-  type: string
-  city: string
-  adresse: string
-  quartier: string
-  role: string
-  isVerified: boolean
-  statut_kyc: string
-  phone_verified_at: string
-  date_inscription: string
-  currentShopId: string
-  shops: any[]
-  bankAccounts: any[]
-  joinDate: string
-}
 
 interface Notification {
-  type: 'success' | 'error'
+  type: NotificationType
   title: string
   message: string
-}
-
-interface City {
-  name: string
-}
-
-interface ServiceType {
-  value: string
-  label: string
-}
-
-interface AuthFormData {
-  name: string
-  companyName: string
-  phone: string
-  email: string
-  login: string
-  password: string
-  confirmPassword: string
-  city: string
-  serviceType: string
 }
 
 // ====================================================================
 // DONNÉES STATIQUES
 // ====================================================================
 
-const cities: City[] = [
-  { name: 'Abidjan' },
-  { name: 'Bouaké' },
-  { name: 'Daloa' },
-  { name: 'Korhogo' },
-  { name: 'San-Pédro' },
-  { name: 'Yamoussoukro' },
-  { name: 'Divo' },
-  { name: 'Gagnoa' },
-  { name: 'Abengourou' },
-  { name: 'Anyama' },
-  { name: 'Grand-Bassam' },
-  { name: 'Bingerville' },
-  { name: 'Agboville' },
-  { name: 'Dabou' },
-  { name: 'Adzopé' },
-  { name: 'Bondoukou' },
-  { name: 'Man' },
-  { name: 'Oumé' },
-  { name: 'Sinfra' },
-  { name: 'Katiola' },
-  { name: 'Ferkessédougou' },
-  { name: 'Odienné' },
-  { name: 'Séguéla' },
-  { name: 'Toumodi' },
-  { name: 'Tiassalé' },
-  { name: 'Akoupé' },
-  { name: 'Alépé' },
-  { name: 'Issia' },
-  { name: 'Duékoué' },
-  { name: 'Guiglo' },
+const cityItems = [
+  { value: 'Abidjan', label: 'Abidjan' },
+  { value: 'Bouaké', label: 'Bouaké' },
+  { value: 'Daloa', label: 'Daloa' },
+  { value: 'Korhogo', label: 'Korhogo' },
+  { value: 'San-Pédro', label: 'San-Pédro' },
+  { value: 'Yamoussoukro', label: 'Yamoussoukro' },
+  { value: 'Divo', label: 'Divo' },
+  { value: 'Gagnoa', label: 'Gagnoa' },
+  { value: 'Abengourou', label: 'Abengourou' },
+  { value: 'Anyama', label: 'Anyama' },
+  { value: 'Grand-Bassam', label: 'Grand-Bassam' },
+  { value: 'Bingerville', label: 'Bingerville' },
+  { value: 'Agboville', label: 'Agboville' },
+  { value: 'Dabou', label: 'Dabou' },
+  { value: 'Adzopé', label: 'Adzopé' },
+  { value: 'Bondoukou', label: 'Bondoukou' },
+  { value: 'Man', label: 'Man' },
+  { value: 'Oumé', label: 'Oumé' },
+  { value: 'Sinfra', label: 'Sinfra' },
+  { value: 'Katiola', label: 'Katiola' },
+  { value: 'Ferkessédougou', label: 'Ferkessédougou' },
+  { value: 'Odienné', label: 'Odienné' },
+  { value: 'Séguéla', label: 'Séguéla' },
+  { value: 'Toumodi', label: 'Toumodi' },
+  { value: 'Tiassalé', label: 'Tiassalé' },
 ]
 
-const serviceTypes: ServiceType[] = [
+const serviceTypeItems = [
   { value: 'pressing-linge', label: 'Pressing Linge' },
   { value: 'pressing-chaussures', label: 'Pressing Chaussures' },
   { value: 'blanchisserie', label: 'Blanchisserie' },
@@ -418,165 +471,62 @@ const serviceTypes: ServiceType[] = [
 ]
 
 // ====================================================================
-// ÉTATS RÉACTIFS
+// ÉTATS
 // ====================================================================
 
 const router = useRouter()
+const authStore = useAuthStore()
 
-// États du formulaire
-const formData = ref<AuthFormData>({
-  name: '',
-  companyName: '',
-  phone: '',
-  email: '',
-  login: '',
-  password: '',
-  confirmPassword: '',
-  city: '',
-  serviceType: '',
-})
+const providerForm$ = ref<any>(null)
+const clientForm$ = ref<any>(null)
 
-const showPassword = ref(false)
-const showConfirmPassword = ref(false)
 const isLoading = ref(false)
 const showOtpModal = ref(false)
 const showReopenOtpButton = ref(false)
+const selectedType = ref<'provider' | 'client' | ''>('')
+const accountType = ref<'provider' | 'client' | ''>('')
+const submittedPhone = ref('')
 
-// États pour les suggestions de ville
-const showCitySuggestions = ref(false)
-const citySearchTerm = ref('')
-
-// États OTP
 const otpCode = ref('')
 const otpTimer = ref(60)
-const generatedOtp = ref('')
-const isOtpGenerated = ref(false)
 let otpInterval: number | null = null
 
-// Notifications
 const notifications = ref<Notification[]>([])
 
 // ====================================================================
-// COMPUTED PROPERTIES
+// FONCTIONS
 // ====================================================================
 
-const formValid = computed(() => {
-  const data = formData.value
-  const hasRequiredFields = !!(
-    data.name &&
-    data.companyName &&
-    data.phone &&
-    data.password &&
-    data.confirmPassword &&
-    data.city &&
-    data.serviceType
-  )
-
-  const passwordsMatch = data.password === data.confirmPassword
-  const passwordValid = data.password.length >= 6
-
-  return hasRequiredFields && passwordsMatch && passwordValid
-})
-
-const passwordsMatch = computed(() => {
-  return formData.value.password === formData.value.confirmPassword
-})
-
-// NOUVEAU : Filtrage des villes basé sur la recherche
-const filteredCities = computed(() => {
-  if (!citySearchTerm.value) {
-    return cities.slice(0, 8) // Afficher les 8 premières villes par défaut
-  }
-  
-  const searchTerm = citySearchTerm.value.toLowerCase()
-  return cities
-    .filter(city => city.name.toLowerCase().includes(searchTerm))
-    .slice(0, 10) // Limiter à 10 résultats
-})
-
-// ====================================================================
-// FONCTIONS D'AUTHENTIFICATION
-// ====================================================================
-
-const redirectBasedOnService = (serviceType: string): void => {
-  // Services qui doivent aller vers DashboardOthers
-  const otherServices = ['fanico', 'nettoyage']
-  
-  if (otherServices.includes(serviceType)) {
-    setTimeout(() => {
-      router.push('/DashboardOthers')
-    }, 1500)
-  } else {
-    setTimeout(() => {
-      router.push('/Dashboard')
-    }, 1500)
-  }
+const setAccountType = (value: 'provider' | 'client' | ''): void => {
+  accountType.value = value
+  if (!value) selectedType.value = ''
+  authStore.setPendingToken(null)
+  showReopenOtpButton.value = false
+  showOtpModal.value = false
 }
 
-const login = (user: User): void => {
-  // Sauvegarder l'utilisateur dans localStorage
-  localStorage.setItem('currentUser', JSON.stringify(user))
-  localStorage.setItem('authToken', 'mock-jwt-token')
-
-  // Mettre à jour les données partagées pour le DashboardLayout
-  updateSharedUserData(user)
-  
-  // Redirection basée sur le type de service
-  redirectBasedOnService(user.serviceType)
+const redirectToDashboard = (): void => {
+  setTimeout(() => {
+    router.push(accountType.value === 'provider' ? '/Dashboard' : '/')
+  }, 1200)
 }
 
-const updateSharedUserData = (user: User): void => {
-  // Créer un événement personnalisé pour notifier le DashboardLayout
-  const userUpdateEvent = new CustomEvent('userDataUpdated', {
-    detail: { user }
-  })
-  window.dispatchEvent(userUpdateEvent)
-
-  // Stocker aussi dans sessionStorage pour un accès immédiat
-  sessionStorage.setItem('currentUserData', JSON.stringify(user))
-}
-
-const getCurrentUser = (): User | null => {
-  const user = localStorage.getItem('currentUser')
-  return user ? JSON.parse(user) : null
-}
-
-// ====================================================================
-// GESTION DES NOTIFICATIONS
-// ====================================================================
-
-const showNotification = (type: 'success' | 'error', title: string, message: string): void => {
+// Notifications
+const showNotification = (type: NotificationType, title: string, message: string): void => {
   const notification: Notification = { type, title, message }
   notifications.value.push(notification)
-
-  setTimeout(() => {
-    removeNotification(notification)
-  }, 5000)
+  setTimeout(() => removeNotification(notification), 5000)
 }
 
 const removeNotification = (notification: Notification): void => {
   const index = notifications.value.indexOf(notification)
-  if (index > -1) {
-    notifications.value.splice(index, 1)
-  }
+  if (index > -1) notifications.value.splice(index, 1)
 }
 
-// ====================================================================
-// GESTION OTP
-// ====================================================================
-
-const generateOtp = (): string => {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString()
-  generatedOtp.value = otp
-  isOtpGenerated.value = true
-  console.log('🔐 Code OTP généré:', otp)
-  return otp
-}
-
+// OTP
 const startOtpTimer = (): void => {
   otpTimer.value = 60
   if (otpInterval) clearInterval(otpInterval)
-
   otpInterval = window.setInterval(() => {
     otpTimer.value--
     if (otpTimer.value <= 0 && otpInterval) {
@@ -586,601 +536,965 @@ const startOtpTimer = (): void => {
   }, 1000)
 }
 
-// NOUVELLE FONCTION : Initialiser toutes les données par défaut
-const initializeDefaultData = (): void => {
-  // Initialiser les services par défaut
-  const defaultServices = getDefaultServices()
-  localStorage.setItem('presso_services', JSON.stringify(defaultServices))
-
-  // Initialiser les commandes par défaut
-  const defaultOrders = getDefaultOrders()
-  localStorage.setItem('presso_orders', JSON.stringify(defaultOrders))
-
-  console.log('✅ Données initialisées :', {
-    services: defaultServices.length,
-    orders: defaultOrders.length
-  })
-}
-
 const verifyOtp = async (): Promise<void> => {
-  if (otpCode.value !== generatedOtp.value) {
-    showNotification('error', 'Code invalide', 'Le code OTP saisi est incorrect. Veuillez réessayer.')
-    otpCode.value = ''
+  if (otpCode.value.length !== 6) {
+    showNotification('error', 'Code invalide', 'Veuillez saisir un code OTP valide.')
     return
   }
 
   isLoading.value = true
-  await new Promise(resolve => setTimeout(resolve, 1000))
-
   try {
-    const newUser = createUser()
-    saveUser(newUser)
-    
-    // NOUVEAU : Initialiser toutes les données par défaut AVANT la connexion
-    initializeDefaultData()
-    
-    login(newUser)
-
-    showNotification('success', 'Inscription réussie', 'Bienvenue parmi nous ! Redirection vers votre Dashboard...')
-
+    await authStore.verifyOtp(otpCode.value)
+    showNotification('success', 'Inscription réussie', 'Bienvenue ! Redirection en cours...')
     showOtpModal.value = false
     showReopenOtpButton.value = false
     resetOtp()
+    redirectToDashboard()
   } catch (error) {
-    showNotification('error', 'Erreur', 'Une erreur est survenue lors de l\'inscription.')
+    const detail = (error as any)?.response?.data?.detail || 'Une erreur est survenue.'
+    showNotification('error', 'Erreur', detail)
   } finally {
     isLoading.value = false
-    cleanupOtp()
   }
 }
 
-const resendOtp = (): void => {
-  const otp = generateOtp()
-  startOtpTimer()
-  showNotification('success', 'Code renvoyé', `Un nouveau code OTP a été généré: ${otp}`)
+const resendOtp = async (): Promise<void> => {
+  try {
+    await authStore.requestOtp()
+    startOtpTimer()
+    showNotification('success', 'Code renvoyé', 'Un nouveau code OTP a été envoyé.')
+  } catch (error) {
+    showNotification('error', 'Erreur', 'Impossible de renvoyer le code OTP.')
+  }
 }
 
 const cancelOtp = (): void => {
   showOtpModal.value = false
-  if (isOtpGenerated.value) {
-    showReopenOtpButton.value = true
-  }
+  if (authStore.pendingToken) showReopenOtpButton.value = true
 }
 
 const reopenOtpModal = (): void => {
   showOtpModal.value = true
   showReopenOtpButton.value = false
-
-  if (otpTimer.value <= 0) {
-    showNotification(
-      'success',
-      'Code disponible',
-      'Le code OTP précédent est toujours valable. Vous pouvez le renvoyer si besoin.'
-    )
-  }
 }
 
 const resetOtp = (): void => {
   otpCode.value = ''
-  generatedOtp.value = ''
   otpTimer.value = 60
-  isOtpGenerated.value = false
   if (otpInterval) {
     clearInterval(otpInterval)
     otpInterval = null
   }
 }
 
-const cleanupOtp = (): void => {
-  if (otpInterval) {
-    clearInterval(otpInterval)
+const onOtpInput = (): void => {
+  if (otpCode.value.length === 6) verifyOtp()
+}
+
+const handleOverlayClick = (e: MouseEvent): void => {
+  e.stopPropagation()
+}
+
+// Normaliser le téléphone avec le préfixe +225
+const normalizePhone = (phone: string): string => {
+  const digits = phone.replace(/\D/g, '')
+  if (digits.startsWith('225')) {
+    return `+${digits}`
   }
+  return `+225${digits}`
 }
 
-// ====================================================================
-// GESTION DES UTILISATEURS
-// ====================================================================
-
-const createUser = (): User => {
-  const data = formData.value
-  const shopId = 'shop_' + Date.now()
-  const userId = 'user_' + Date.now()
-
-  const nameParts = data.name.trim().split(' ')
-  const displayName = nameParts.slice(0, 2).join(' ')
-
-  const defaultCompanyName = data.companyName || `${data.name} - ${getServiceLabel(data.serviceType)}`
-
-  return {
-    id: userId,
-    name: data.name,
-    displayName: displayName,
-    first_name: nameParts[0] || '',
-    last_name: nameParts.slice(1).join(' ') || '',
-    companyName: defaultCompanyName,
-    phone: data.phone,
-    email: data.email || '', // Email laissé vide si non fourni
-    password: data.password,
-    serviceType: data.serviceType,
-    type: data.serviceType,
-    city: data.city,
-    adresse: '',
-    quartier: '',
-    role: 'owner',
-    isVerified: false,
-    statut_kyc: 'non_verifie',
-    phone_verified_at: new Date().toISOString(),
-    date_inscription: new Date().toISOString(),
-    currentShopId: shopId,
-    shops: [
-      {
-        id: shopId,
-        ownerId: userId,
-        name: defaultCompanyName,
-        category: data.serviceType,
-        city: data.city,
-        commune: '',
-        adresse: '',
-        prestations: [data.serviceType],
-        mainPrestation: data.serviceType,
-        managers: [],
-        documents: {
-          photos: [],
-          identityPhoto: null,
-          commercePermit: null,
-        },
-        locations: [
-          {
-            id: 'loc_' + Date.now(),
-            latitude: 0,
-            longitude: 0,
-            address: data.city,
-            isMain: true,
-          }
-        ],
-        isVerified: false,
-        isDefault: true,
-        createdAt: new Date().toISOString(),
-      },
-    ],
-    bankAccounts: [],
-    joinDate: new Date().toISOString(),
-  }
-}
-
-const getServiceLabel = (serviceType: string): string => {
-  const service = serviceTypes.find(s => s.value === serviceType)
-  return service ? service.label : 'Service'
-}
-
-const saveUser = (user: User): void => {
-  const existingUsers = JSON.parse(localStorage.getItem('presso_users') || '[]')
-  existingUsers.push(user)
-  localStorage.setItem('presso_users', JSON.stringify(existingUsers))
-}
-
-const userExists = (): boolean => {
-  const existingUsers = JSON.parse(localStorage.getItem('presso_users') || '[]')
-  const data = formData.value
-  return existingUsers.some((user: User) =>
-    user.phone === data.phone || (data.email && user.email === data.email)
-  )
-}
-
-// ====================================================================
-// FONCTIONS POUR LES DONNÉES PAR DÉFAUT (COPIÉES DE COMMANDES.VUE)
-// ====================================================================
-
-const getDefaultServices = () => {
-  return [
-    {
-      id: 'SRV001',
-      name: 'Nettoyage à sec',
-      category: 'pressing',
-      price: 12.0,
-      duration: '48h',
-      description: 'Nettoyage professionnel à sec pour tous types de vêtements',
-      active: true,
-    },
-    {
-      id: 'SRV002',
-      name: 'Repassage',
-      category: 'pressing',
-      price: 8.0,
-      duration: '24h',
-      description: 'Repassage soigné et professionnel',
-      active: true,
-    },
-    {
-      id: 'SRV003',
-      name: 'Lavage et repassage',
-      category: 'laverie',
-      price: 15.0,
-      duration: '48h',
-      description: 'Service complet de lavage et repassage',
-      active: true,
-    },
-  ]
-}
-
-const getDefaultOrders = () => {
-  const getTodayDate = (): string => {
-    const today = new Date()
-    return today.toISOString().split('T')[0]!
-  }
-
-  const getFutureDate = (daysToAdd: number): string => {
-    const date = new Date()
-    date.setDate(date.getDate() + daysToAdd)
-    return date.toISOString().split('T')[0]!
-  }
-
-  const today = getTodayDate()
-  
-  return [
-    {
-      id: 'CMD001',
-      serviceType: 'SRV001',
-      items: ['Chemise blanche', 'Pantalon costume', 'Robe de soirée'],
-      itemsWithQuantities: [
-        { name: 'Chemise blanche', quantity: 2, price: 8.0 },
-        { name: 'Pantalon costume', quantity: 1, price: 12.0 },
-        { name: 'Robe de soirée', quantity: 1, price: 25.0 },
-      ],
-      totalItems: 4,
-      address: '25 Avenue des Champs, Paris 75008',
-      deliveryDate: getFutureDate(2),
-      deliveryTime: '14:00-16:00',
-      price: 45.0,
-      status: 'pending',
-      createdAt: `${today}T10:30:00`,
-      specialInstructions: 'Urgent - Évènement important',
-      customer: {
-        name: 'Jean Dupont',
-        phone: '+33 6 12 34 56 78'
-      }
-    },
-    {
-      id: 'CMD002',
-      serviceType: 'SRV002',
-      items: ['Costume 2 pièces', 'Cravate'],
-      itemsWithQuantities: [
-        { name: 'Costume 2 pièces', quantity: 1, price: 30.0 },
-        { name: 'Cravate', quantity: 2, price: 5.0 }
-      ],
-      totalItems: 3,
-      address: '10 Boulevard Saint-Germain, Paris 75005',
-      deliveryDate: getFutureDate(1),
-      deliveryTime: '16:00-18:00',
-      price: 40.0,
-      status: 'accepted',
-      createdAt: `${today}T14:20:00`,
-      specialInstructions: 'Repassage soigné',
-      customer: {
-        name: 'Marie Martin',
-        phone: '+33 6 98 76 54 32'
-      },
-      statusHistory: [
-        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T15:00:00` }
-      ]
-    },
-    {
-      id: 'CMD003',
-      serviceType: 'SRV003',
-      items: ['Linge de maison'],
-      itemsWithQuantities: [
-        { name: 'Linge de maison', quantity: 8, price: 7.5 }
-      ],
-      totalItems: 8,
-      address: '5 Rue Victor Hugo, Paris 75016',
-      deliveryDate: getFutureDate(3),
-      price: 60.0,
-      status: 'completed',
-      createdAt: `${today}T09:15:00`,
-      customer: {
-        name: 'Pierre Lambert',
-        phone: '+33 6 45 67 89 01'
-      },
-      statusHistory: [
-        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T10:00:00` },
-        { status: 'completed', label: 'Commande terminée', timestamp: `${today}T16:00:00` }
-      ]
-    },
-    {
-      id: 'CMD004',
-      serviceType: 'SRV001',
-      items: ['Veste en cuir', 'Pull en laine'],
-      itemsWithQuantities: [
-        { name: 'Veste en cuir', quantity: 1, price: 25.0 },
-        { name: 'Pull en laine', quantity: 3, price: 15.0 }
-      ],
-      totalItems: 4,
-      address: '15 Rue de Rivoli, Paris 75004',
-      deliveryDate: getFutureDate(4),
-      requestedDate: getFutureDate(1),
-      requestedTime: '11:00-13:00',
-      price: 70.0,
-      status: 'refused',
-      createdAt: `${today}T11:00:00`,
-      refusalReason: 'Service non disponible pour les articles en cuir',
-      refusedAt: `${today}T14:30:00`,
-      customer: {
-        name: 'Sophie Bernard',
-        phone: '+33 6 23 45 67 89'
-      }
-    },
-    {
-      id: 'CMD005',
-      serviceType: 'SRV002',
-      items: ['Chemisier soie', 'Jupe lin'],
-      itemsWithQuantities: [
-        { name: 'Chemisier soie', quantity: 2, price: 18.0 },
-        { name: 'Jupe lin', quantity: 1, price: 22.0 }
-      ],
-      totalItems: 3,
-      address: '8 Avenue Montaigne, Paris 75008',
-      deliveryDate: getFutureDate(2),
-      deliveryTime: '09:00-11:00',
-      price: 58.0,
-      status: 'pending',
-      createdAt: `${today}T16:45:00`,
-      specialInstructions: 'Attention aux tissus délicats',
-      customer: {
-        name: 'Claire Dubois',
-        phone: '+33 6 34 56 78 90'
-      }
-    },
-    {
-      id: 'CMD006',
-      serviceType: 'SRV003',
-      items: ['Couettes', 'Draps', 'Taies d\'oreiller'],
-      itemsWithQuantities: [
-        { name: 'Couettes', quantity: 2, price: 35.0 },
-        { name: 'Draps', quantity: 4, price: 12.0 },
-        { name: 'Taies d\'oreiller', quantity: 8, price: 6.0 }
-      ],
-      totalItems: 14,
-      address: '22 Rue du Faubourg Saint-Honoré, Paris 75008',
-      deliveryDate: getFutureDate(5),
-      price: 150.0,
-      status: 'accepted',
-      createdAt: `${today}T13:20:00`,
-      customer: {
-        name: 'Hôtel Plaza',
-        phone: '+33 1 42 68 90 12'
-      },
-      statusHistory: [
-        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T14:00:00` }
-      ]
-    },
-    {
-      id: 'CMD007',
-      serviceType: 'SRV001',
-      items: ['Costume trois pièces', 'Chemise blanche'],
-      itemsWithQuantities: [
-        { name: 'Costume trois pièces', quantity: 1, price: 45.0 },
-        { name: 'Chemise blanche', quantity: 3, price: 9.0 }
-      ],
-      totalItems: 4,
-      address: '3 Place de la Concorde, Paris 75008',
-      deliveryDate: getFutureDate(3),
-      deliveryTime: '17:00-19:00',
-      price: 72.0,
-      status: 'completed',
-      createdAt: `${today}T08:30:00`,
-      customer: {
-        name: 'Thomas Moreau',
-        phone: '+33 6 78 90 12 34'
-      },
-      statusHistory: [
-        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T09:15:00` },
-        { status: 'completed', label: 'Commande terminée', timestamp: `${today}T16:45:00` }
-      ]
-    },
-    {
-      id: 'CMD008',
-      serviceType: 'SRV002',
-      items: ['Robe de mariée'],
-      itemsWithQuantities: [
-        { name: 'Robe de mariée', quantity: 1, price: 120.0 }
-      ],
-      totalItems: 1,
-      address: '45 Avenue George V, Paris 75008',
-      deliveryDate: getFutureDate(7),
-      price: 120.0,
-      status: 'pending',
-      createdAt: `${today}T15:10:00`,
-      specialInstructions: 'TRÈS URGENT - Mariée samedi prochain',
-      customer: {
-        name: 'Élodie Petit',
-        phone: '+33 6 91 23 45 67'
-      }
-    },
-    {
-      id: 'CMD009',
-      serviceType: 'SRV003',
-      items: ['Serviettes de bain', 'Nappes'],
-      itemsWithQuantities: [
-        { name: 'Serviettes de bain', quantity: 12, price: 8.0 },
-        { name: 'Nappes', quantity: 6, price: 15.0 }
-      ],
-      totalItems: 18,
-      address: '18 Rue de la Paix, Paris 75002',
-      deliveryDate: getFutureDate(4),
-      price: 186.0,
-      status: 'accepted',
-      createdAt: `${today}T11:45:00`,
-      customer: {
-        name: 'Restaurant Le Gourmet',
-        phone: '+33 1 40 20 30 40'
-      },
-      statusHistory: [
-        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T12:30:00` }
-      ]
-    }
-  ]
-}
-
-// ====================================================================
-// GESTION DU CHAMP VILLE AVEC SUGGESTIONS
-// ====================================================================
-
-const onCityInput = (event: Event): void => {
-  const target = event.target as HTMLInputElement
-  citySearchTerm.value = target.value
-  showCitySuggestions.value = true
-}
-
-const onCityBlur = (): void => {
-  // Utiliser setTimeout pour permettre le clic sur les suggestions
-  setTimeout(() => {
-    showCitySuggestions.value = false
-  }, 200)
-}
-
-const selectCity = (cityName: string): void => {
-  formData.value.city = cityName
-  citySearchTerm.value = cityName
-  showCitySuggestions.value = false
-}
-
-// ====================================================================
-// GESTION DU FORMULAIRE
-// ====================================================================
-
-const handleSubmit = async (): Promise<void> => {
-  if (!formValid.value) {
-    showNotification(
-      'error',
-      'Formulaire invalide',
-      'Veuillez remplir tous les champs requis et vérifier que les mots de passe correspondent'
-    )
-    return
-  }
-
-  if (formData.value.password.length < 6) {
-    showNotification('error', 'Mot de passe invalide', 'Le mot de passe doit contenir au moins 6 caractères')
-    return
-  }
-
-  if (userExists()) {
-    showNotification('error', 'Compte existant', 'Ce numéro de téléphone ou email est déjà utilisé')
-    return
-  }
+// Submit Provider
+const handleProviderSubmit = async (form$: any): Promise<void> => {
+  const data = form$.data
+  const phoneNormalized = normalizePhone(data.phone)
 
   isLoading.value = true
-
-  await new Promise(resolve => setTimeout(resolve, 1500))
+  submittedPhone.value = phoneNormalized
 
   try {
-    if (!isOtpGenerated.value) {
-      const otp = generateOtp()
+    const response = await authStore.registerProvider({
+      name: data.name,
+      company_name: data.company_name,
+      service_type: data.service_type,
+      city: data.city,
+      phone: phoneNormalized,
+      email: data.email || undefined,
+      login: phoneNormalized,
+      password: data.password,
+      password_confirm: data.password_confirm,
+    })
+
+    if (response.requires_otp && authStore.pendingToken) {
+      showOtpModal.value = true
       startOtpTimer()
+    } else {
+      showNotification('success', 'Vérification en cours', response.detail || 'Si éligible, un OTP a été envoyé.')
     }
-
-    showOtpModal.value = true
-    showReopenOtpButton.value = false
   } catch (error) {
-    showNotification('error', 'Erreur', 'Une erreur est survenue. Veuillez réessayer.')
+    const detail = (error as any)?.response?.data?.detail || 'Une erreur est survenue.'
+    showNotification('error', 'Erreur', detail)
   } finally {
-    if (!showOtpModal.value) {
-      isLoading.value = false
-    }
+    isLoading.value = false
   }
 }
 
-// ====================================================================
-// FONCTIONS UTILITAIRES
-// ====================================================================
+// Submit Client
+const handleClientSubmit = async (form$: any): Promise<void> => {
+  const data = form$.data
+  const phoneNormalized = normalizePhone(data.phone)
 
-const togglePasswordVisibility = (): void => {
-  showPassword.value = !showPassword.value
-}
+  isLoading.value = true
+  submittedPhone.value = phoneNormalized
 
-const toggleConfirmPasswordVisibility = (): void => {
-  showConfirmPassword.value = !showConfirmPassword.value
-}
-
-const goBack = (): void => {
-  router.push('/')
-}
-
-// NOUVELLE FONCTION : Navigation vers login avec stockage du mode
-const navigateToLogin = (): void => {
-  localStorage.setItem('authMode', 'login')
-  router.push('/connexion')
-}
-
-const handleOverlayClick = (event: MouseEvent): void => {
-  event.stopPropagation()
-}
-
-const copyOtpToClipboard = async (): Promise<void> => {
   try {
-    await navigator.clipboard.writeText(generatedOtp.value)
-    showCopySuccess()
-  } catch (err) {
-    const textArea = document.createElement('textarea')
-    textArea.value = generatedOtp.value
-    document.body.appendChild(textArea)
-    textArea.select()
-    document.execCommand('copy')
-    document.body.removeChild(textArea)
-    showCopySuccess()
-  }
-}
+    const response = await authStore.registerClient({
+      phone: phoneNormalized,
+      first_name: data.first_name || undefined,
+      last_name: data.last_name || undefined,
+      email: data.email || undefined,
+      password: data.password || undefined,
+      password_confirm: data.password_confirm || undefined,
+    })
 
-const showCopySuccess = (): void => {
-  const notification = document.createElement('div')
-  notification.className = 'copy-success-notification'
-  notification.innerHTML = `
-    <div class="copy-success-content">
-      <i class="fas fa-check-circle"></i>
-      <span>Code OTP copié !</span>
-    </div>
-  `
-  document.body.appendChild(notification)
-
-  setTimeout(() => {
-    if (document.body.contains(notification)) {
-      document.body.removeChild(notification)
+    if (response.requires_otp && authStore.pendingToken) {
+      showOtpModal.value = true
+      startOtpTimer()
+    } else {
+      showNotification('success', 'Vérification en cours', response.detail || 'Si éligible, un OTP a été envoyé.')
     }
-  }, 2000)
-}
-
-const onOtpInput = (): void => {
-  if (otpCode.value.length === 6) {
-    verifyOtp()
+  } catch (error) {
+    const detail = (error as any)?.response?.data?.detail || 'Une erreur est survenue.'
+    showNotification('error', 'Erreur', detail)
+  } finally {
+    isLoading.value = false
   }
 }
-
-const particleStyle = (index: number) => {
-  const size = Math.random() * 6 + 2
-  const duration = Math.random() * 20 + 10
-  const delay = Math.random() * 5
-  const opacity = Math.random() * 0.3 + 0.1
-
-  return {
-    width: `${size}px`,
-    height: `${size}px`,
-    animationDuration: `${duration}s`,
-    animationDelay: `${delay}s`,
-    opacity: opacity.toString(),
-    left: `${Math.random() * 100}%`,
-  }
-}
-
-// ====================================================================
-// LIFECYCLE HOOKS
-// ====================================================================
 
 onMounted(() => {
   console.log('Inscription.vue mounted')
 })
 
 onUnmounted(() => {
-  cleanupOtp()
+  if (otpInterval) clearInterval(otpInterval)
 })
 </script>
 
-<style scoped src="@/Views/Auth/Authentification.css"></style>
+<style>
+/* ============================================
+   THÈME VUEFORM - COULEURS PRESSO (BLEU)
+   ============================================ */
+
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Variables CSS Vueform - Remplacer VERT par BLEU */
+:root {
+  /* Couleurs principales - BLEU au lieu de VERT */
+  --vf-primary: #039AE3;
+  --vf-primary-darker: #0B61B0;
+  
+  /* Couleurs de danger/succès */
+  --vf-danger: #EF4444;
+  --vf-danger-lighter: #FEE2E2;
+  --vf-success: #039AE3;
+  --vf-success-lighter: rgba(3, 154, 227, 0.1);
+  
+  /* Couleurs de fond et bordures */
+  --vf-bg-input: #FFFFFF;
+  --vf-bg-input-hover: #FFFFFF;
+  --vf-bg-input-focus: #FFFFFF;
+  --vf-bg-disabled: #F4F7FB;
+  --vf-bg-selected: rgba(3, 154, 227, 0.08);
+  
+  --vf-border-color-input: #E5E7EB;
+  --vf-border-color-input-hover: #039AE3;
+  --vf-border-color-input-focus: #039AE3;
+  
+  /* Couleurs de texte */
+  --vf-color-input: #1F2937;
+  --vf-color-placeholder: #9CA3AF;
+  --vf-color-floating: #6B7280;
+  --vf-color-disabled: #9CA3AF;
+  
+  /* Ring (focus) - BLEU */
+  --vf-ring-width: 3px;
+  --vf-ring-color: rgba(3, 154, 227, 0.15);
+  
+  /* Radius */
+  --vf-radius-input: 8px;
+  --vf-radius-btn: 24px;
+  --vf-radius-small: 6px;
+  --vf-radius-large: 16px;
+  
+  /* Tailles */
+  --vf-min-height-input: 48px;
+  --vf-py-input: 12px;
+  --vf-px-input: 16px;
+  
+  /* Boutons - BLEU */
+  --vf-bg-btn: #039AE3;
+  --vf-bg-btn-hover: #0B61B0;
+  --vf-color-btn: #FFFFFF;
+  --vf-bg-btn-secondary: #FFFFFF;
+  --vf-color-btn-secondary: #1F2937;
+  --vf-border-color-btn-secondary: #E5E7EB;
+  
+  /* Checkbox/Radio - BLEU */
+  --vf-bg-checkbox: #FFFFFF;
+  --vf-border-color-checkbox: #D1D5DB;
+  --vf-bg-checked: #039AE3;
+  --vf-border-color-checked: #039AE3;
+  
+  /* Font */
+  --vf-font-size: 15px;
+  --vf-font-size-small: 13px;
+  --vf-font-size-h1: 24px;
+  --vf-line-height: 1.5;
+  
+  /* Espacements */
+  --vf-gutter: 16px;
+  --vf-gap-y-group: 12px;
+}
+
+/* Override des boutons Vueform - style BLEU arrondi */
+.vf-btn {
+  background: var(--vf-bg-btn) !important;
+  border: none !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  border-radius: var(--vf-radius-btn) !important;
+}
+
+.vf-btn:hover:not(:disabled) {
+  background: var(--vf-bg-btn-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(3, 154, 227, 0.3);
+}
+
+.vf-btn-secondary {
+  background: var(--vf-bg-btn-secondary) !important;
+  color: var(--vf-color-btn-secondary) !important;
+  border: 1px solid var(--vf-border-color-btn-secondary) !important;
+}
+
+.vf-btn-secondary:hover {
+  background: #F4F7FB !important;
+}
+
+/* Inputs */
+.vf-input-group {
+  transition: all 0.2s ease;
+}
+
+.vf-input-group:focus-within {
+  box-shadow: 0 0 0 var(--vf-ring-width) var(--vf-ring-color);
+}
+
+/* Select dropdown */
+.vf-multiselect-dropdown {
+  border-radius: var(--vf-radius-input) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+}
+
+.vf-multiselect-option.is-pointed {
+  background: var(--vf-bg-selected) !important;
+}
+
+.vf-multiselect-option.is-selected {
+  background: var(--vf-primary) !important;
+  color: white !important;
+}
+
+/* Checkboxes - BLEU */
+.vf-checkbox-check {
+  border-color: var(--vf-border-color-checkbox) !important;
+}
+
+.vf-checkbox-check.is-checked {
+  background: var(--vf-bg-checked) !important;
+  border-color: var(--vf-border-color-checked) !important;
+}
+
+.vf-checkbox-check::after {
+  border-color: white !important;
+}
+
+/* Addons (préfixe téléphone) */
+.vf-addon {
+  background: #F4F7FB !important;
+  border-right: 1px solid var(--vf-border-color-input) !important;
+  color: #6B7280 !important;
+  font-weight: 500 !important;
+}
+
+/* Descriptions */
+.vf-element-description {
+  color: #6B7280 !important;
+  font-size: 13px !important;
+  margin-top: 6px !important;
+}
+
+/* Wrapper pour champ mot de passe avec bouton œil */
+.password-field-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.password-field-wrapper:last-child {
+  margin-bottom: 0;
+}
+
+/* Bouton toggle visibilité mot de passe */
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: #6B7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+  z-index: 10;
+}
+
+.password-toggle-btn:hover {
+  color: #039AE3;
+}
+
+.password-toggle-btn i {
+  font-size: 16px;
+}
+</style>
+
+<style scoped>
+/* ============================================
+   STYLES PAGE INSCRIPTION - STYLE UPWORK
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.presso-auth-page {
+  min-height: 100vh;
+  background: #E3F2FB;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Header avec logo */
+.presso-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  padding: 0 32px;
+  z-index: 100;
+}
+
+.logo-link {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  height: 40px;
+  width: auto;
+}
+
+/* Contenu principal */
+.presso-main {
+  min-height: 100vh;
+  padding-top: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 40px;
+}
+
+/* ============================================
+   ÉTAPE 1: SÉLECTION DU TYPE DE COMPTE
+   ============================================ */
+
+.account-selection {
+  text-align: center;
+  padding: 60px 20px;
+  max-width: 680px;
+  width: 100%;
+}
+
+.selection-title {
+  font-size: 32px;
+  font-weight: 600;
+  color: #1F2937;
+  margin-bottom: 48px;
+}
+
+/* Cards de sélection (style Upwork) */
+.account-cards {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.account-card {
+  width: 220px;
+  padding: 24px;
+  border: 2px solid #E5E7EB;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  text-align: left;
+  background: #FFFFFF;
+}
+
+.account-card:hover {
+  border-color: #039AE3;
+}
+
+.account-card.selected {
+  border-color: #039AE3;
+  background: rgba(3, 154, 227, 0.02);
+}
+
+.card-icon {
+  font-size: 24px;
+  color: #6B7280;
+  margin-bottom: 12px;
+}
+
+.account-card.selected .card-icon {
+  color: #039AE3;
+}
+
+.card-radio {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.radio-circle {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #D1D5DB;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.radio-circle.checked {
+  border-color: #039AE3;
+  background: #039AE3;
+}
+
+.radio-circle.checked::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1F2937;
+}
+
+.card-subtitle {
+  font-size: 14px;
+  color: #6B7280;
+}
+
+/* Bouton Créer un compte */
+.create-account-btn {
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #9CA3AF;
+  background: #F3F4F6;
+  border: none;
+  border-radius: 24px;
+  cursor: not-allowed;
+  transition: all 0.2s ease;
+  margin-bottom: 24px;
+}
+
+.create-account-btn.active {
+  background: #039AE3;
+  color: white;
+  cursor: pointer;
+}
+
+.create-account-btn.active:hover {
+  background: #0B61B0;
+}
+
+/* Lien connexion */
+.login-text {
+  font-size: 14px;
+  color: #6B7280;
+}
+
+.login-link {
+  color: #039AE3;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.login-link:hover {
+  text-decoration: underline;
+}
+
+/* ============================================
+   ÉTAPE 2: FORMULAIRE
+   ============================================ */
+
+.form-container {
+  width: 100%;
+  max-width: 680px;
+  padding: 40px 20px;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #6B7280;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 0;
+  margin-bottom: 24px;
+  transition: color 0.2s;
+}
+
+.back-btn:hover {
+  color: #039AE3;
+}
+
+.presso-vueform {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 32px;
+}
+
+.form-title {
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  color: #1F2937 !important;
+  margin: 0 0 8px 0 !important;
+}
+
+.form-divider {
+  border: none !important;
+  height: 1px !important;
+  background: #E5E7EB !important;
+  margin: 20px 0 !important;
+}
+
+.form-login {
+  text-align: center;
+  margin-top: 24px;
+}
+
+/* Liens dans le formulaire */
+.link {
+  color: #039AE3;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* ============================================
+   NOTIFICATIONS
+   ============================================ */
+
+.presso-notification {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideIn 0.3s ease;
+  max-width: 400px;
+}
+
+.presso-notification.success {
+  background: #D1FAE5;
+  border: 1px solid #86EFAC;
+  color: #065F46;
+}
+
+.presso-notification.error {
+  background: #FEE2E2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.notification-content p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 4px;
+  opacity: 0.7;
+}
+
+.notification-close:hover {
+  opacity: 1;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Bouton réouverture OTP */
+.reopen-otp-container {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+}
+
+.reopen-otp-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #039AE3;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(3, 154, 227, 0.3);
+  transition: all 0.2s;
+}
+
+.reopen-otp-btn:hover {
+  background: #0B61B0;
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   MODAL OTP
+   ============================================ */
+
+.otp-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.otp-modal {
+  background: #FFFFFF;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 420px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.3s ease;
+}
+
+.otp-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #039AE3, #0B61B0);
+  color: white;
+}
+
+.otp-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.close-modal {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.close-modal:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.otp-modal-content {
+  padding: 24px;
+}
+
+.otp-info {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.otp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #039AE3;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.otp-text {
+  color: #6B7280;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.phone-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 16px;
+  color: #1F2937;
+}
+
+.otp-input-wrapper {
+  margin-bottom: 16px;
+}
+
+.otp-label {
+  display: block;
+  font-size: 14px;
+  color: #6B7280;
+  margin-bottom: 8px;
+}
+
+.otp-input {
+  width: 100%;
+  padding: 16px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 8px;
+  border: 2px solid #E5E7EB;
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.otp-input:focus {
+  border-color: #039AE3;
+}
+
+.otp-input::placeholder {
+  color: #D1D5DB;
+  letter-spacing: 8px;
+}
+
+.otp-timer {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 14px;
+  color: #6B7280;
+}
+
+.resend-link {
+  background: none;
+  border: none;
+  color: #039AE3;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.resend-link:hover {
+  background: rgba(3, 154, 227, 0.08);
+}
+
+.otp-actions {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  background: #F4F7FB;
+  border-top: 1px solid #E5E7EB;
+}
+
+.btn-secondary,
+.btn-primary {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.btn-secondary {
+  background: #FFFFFF;
+  color: #1F2937;
+  border: 1px solid #E5E7EB;
+}
+
+.btn-secondary:hover {
+  background: #F4F7FB;
+}
+
+.btn-primary {
+  background: #039AE3;
+  color: white;
+  border: none;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #0B61B0;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fa-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 600px) {
+  .presso-header {
+    padding: 0 16px;
+  }
+
+  .logo {
+    height: 32px;
+  }
+
+  .selection-title {
+    font-size: 24px;
+    margin-bottom: 32px;
+  }
+
+  .account-cards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .account-card {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .form-container {
+    padding: 24px 16px;
+  }
+
+  .presso-vueform {
+    padding: 24px 20px;
+  }
+
+  .otp-modal {
+    width: 95%;
+  }
+
+  .presso-notification {
+    left: 16px;
+    right: 16px;
+    max-width: none;
+    top: 80px;
+  }
+}
+</style>

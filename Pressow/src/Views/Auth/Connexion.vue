@@ -1,309 +1,179 @@
 <template>
-  <div class="auth-page">
-    <div class="auth-container">
-      <router-link to="/">
-        <button class="back-button" @click="goBack">
-          <i class="fas fa-arrow-left"></i>
-          <span>Retour à l'accueil</span>
-        </button>
+  <div class="presso-auth-page">
+    <!-- Notifications -->
+    <div v-for="(notification, index) in notifications" :key="index" class="presso-notification" :class="notification.type">
+      <div class="notification-content">
+        <i :class="notification.type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'"></i>
+        <div>
+          <strong>{{ notification.title }}</strong>
+          <p>{{ notification.message }}</p>
+        </div>
+      </div>
+      <button @click="removeNotification(notification)" class="notification-close">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Header avec logo (style Upwork) -->
+    <header class="presso-header">
+      <router-link to="/" class="logo-link">
+        <img src="/logo_v2_r.png" alt="Pressow" class="logo" />
       </router-link>
+    </header>
 
-      <div v-for="(notification, index) in notifications" :key="index" class="notification" :class="notification.type">
-        <div class="notification-content">
-          <i :class="notification.type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'"></i>
-          <div>
-            <strong>{{ notification.title }}</strong>
-            <p>{{ notification.message }}</p>
-          </div>
-        </div>
-        <button @click="removeNotification(notification)" class="notification-close">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
+    <!-- Contenu principal -->
+    <main class="presso-main">
+      <div class="form-container">
+        <!-- Formulaire de connexion avec Vueform -->
+        <Vueform
+          ref="loginForm$"
+          :display-errors="false"
+          :endpoint="false"
+          @submit="handleSubmit"
+          class="presso-vueform"
+        >
+          <StaticElement
+            name="title"
+            content="Connexion"
+            tag="h1"
+            :attrs="{ class: 'form-title' }"
+          />
+          
+          <StaticElement
+            name="subtitle"
+            content="Connectez-vous à votre espace prestataire ou client"
+            tag="p"
+            :attrs="{ class: 'form-subtitle' }"
+          />
+          
+          <StaticElement name="divider1" tag="hr" :attrs="{ class: 'form-divider' }" />
 
-      <div class="auth-card">
-        <div class="auth-header">
-          <div class="auth-title">
-            <span class="title-text">Connexion</span>
-          </div>
-          <p class="auth-description">
-            Connectez-vous à votre espace prestataire
-          </p>
-        </div>
-        <div class="auth-content">
-          <form @submit.prevent="handleSubmit" class="auth-form">
-            <div class="form-group-Section">
-              <div class="form-group slide-in">
-                <label for="login" class="form-label">Email ou numéro de téléphone</label>
-                <div class="input-wrapper">
-                  <i class="fas fa-user input-icon"></i>
-                  <input id="login" name="login" v-model="formData.login"
-                    placeholder="jean.dupont@example.com ou +33612345678" required class="form-input" />
-                </div>
-              </div>
+          <!-- Identifiant -->
+          <TextElement
+            name="login"
+            placeholder="Email ou numéro de téléphone"
+            field-name="Identifiant"
+            :rules="['required']"
+          />
+          <StaticElement
+            name="login_desc"
+            content="Utilisez votre email ou numéro de téléphone"
+            tag="p"
+            :attrs="{ class: 'field-description' }"
+          />
 
-              <div class="form-group slide-in">
-                <label for="password" class="form-label">Mot de passe</label>
-                <div class="input-wrapper">
-                  <i class="fas fa-lock input-icon"></i>
-                  <input id="password" name="password" :type="showPassword ? 'text' : 'password'"
-                    v-model="formData.password" placeholder="••••••••" required class="form-input password-input" />
-                  <button type="button" @click="togglePasswordVisibility" class="password-toggle">
-                    <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
+          <!-- Mot de passe -->
+          <TextElement
+            name="password"
+            input-type="password"
+            placeholder="Mot de passe"
+            field-name="Mot de passe"
+            :rules="['required']"
+          />
 
-            <div class="submit-button-container">
-              <button type="submit" class="submit-button" :class="{ glow: formValid }"
-                :disabled="!formValid || isLoading">
-                <span class="button-content">
-                  <template v-if="isLoading">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    Chargement...
-                  </template>
-                  <template v-else>
-                    Se connecter
-                    <i class="fas fa-arrow-right button-icon"></i>
-                  </template>
-                </span>
-                <div class="button-shine"></div>
-              </button>
-            </div>
-          </form>
+          <!-- Lien mot de passe oublié -->
+          <StaticElement name="forgot_password" :attrs="{ class: 'forgot-password-container' }">
+            <template #default>
+              <router-link to="/mot-de-passe-oublie" class="forgot-link">
+                Mot de passe oublié ?
+              </router-link>
+            </template>
+          </StaticElement>
 
-          <div class="toggle-mode">
-            <button @click="navigateToRegister" class="toggle-button">
-              <span class="toggle-text">
-                Pas encore de compte ? S'inscrire
-              </span>
-              <i class="fas fa-arrow-right toggle-icon"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+          <StaticElement name="divider2" tag="hr" :attrs="{ class: 'form-divider' }" />
 
-    <div class="auth-background">
-      <div class="floating-bubble bubble-1"></div>
-      <div class="floating-bubble bubble-2"></div>
-      <div class="floating-bubble bubble-3"></div>
+          <!-- Submit -->
+          <ButtonElement
+            name="submit"
+            :submits="true"
+            :button-label="isLoading ? 'Connexion en cours...' : 'Se connecter'"
+            :full="true"
+            size="lg"
+            :loading="isLoading"
+            :disabled="isLoading"
+          />
+        </Vueform>
 
-      <div class="floating-icon auth-icon-1">
-        <i class="fas fa-tshirt"></i>
+        <!-- Lien vers inscription -->
+        <p class="register-text">
+          Pas encore de compte ? 
+          <router-link to="/Inscription" class="register-link">Créer un compte</router-link>
+        </p>
       </div>
-      <div class="floating-icon auth-icon-2">
-        <i class="fas fa-soap"></i>
-      </div>
-      <div class="floating-icon auth-icon-3">
-        <i class="fas fa-spray-can"></i>
-      </div>
-      <div class="floating-icon auth-icon-4">
-        <i class="fas fa-wind"></i>
-      </div>
-      <div class="floating-icon auth-icon-5">
-        <i class="fas fa-temperature-high"></i>
-      </div>
-      <div class="floating-icon auth-icon-6">
-        <i class="fas fa-water"></i>
-      </div>
-    </div>
-
-    <div class="particles-container">
-      <div v-for="i in 15" :key="i" class="particle" :style="particleStyle(i)"></div>
-    </div>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import type { AuthUser, NotificationType } from '@/types/types'
 
-interface User {
-  id: string
-  name: string
-  displayName: string
-  first_name: string
-  last_name: string
-  companyName: string
-  phone: string
-  email: string
-  password: string
-  serviceType: string
-  type: string
-  city: string
-  adresse: string
-  quartier: string
-  role: string
-  isVerified: boolean
-  statut_kyc: string
-  phone_verified_at: string
-  date_inscription: string
-  currentShopId: string
-  shops: any[]
-  bankAccounts: any[]
-  joinDate: string
-}
+// ====================================================================
+// TYPES
+// ====================================================================
 
 interface Notification {
-  type: 'success' | 'error'
+  type: NotificationType
   title: string
   message: string
 }
 
-interface AuthFormData {
-  login: string
-  password: string
-}
+// ====================================================================
+// ÉTATS
+// ====================================================================
 
 const router = useRouter()
+const authStore = useAuthStore()
 
-const formData = ref<AuthFormData>({
-  login: '',
-  password: ''
-})
-
-const showPassword = ref(false)
+const loginForm$ = ref<any>(null)
 const isLoading = ref(false)
 const notifications = ref<Notification[]>([])
 
-const formValid = computed(() => {
-  return !!(formData.value.login && formData.value.password)
-})
+// ====================================================================
+// FONCTIONS
+// ====================================================================
 
-const showNotification = (type: 'success' | 'error', title: string, message: string): void => {
+const showNotification = (type: NotificationType, title: string, message: string): void => {
   const notification: Notification = { type, title, message }
   notifications.value.push(notification)
-  setTimeout(() => {
-    removeNotification(notification)
-  }, 5000)
+  setTimeout(() => removeNotification(notification), 5000)
 }
 
 const removeNotification = (notification: Notification): void => {
   const index = notifications.value.indexOf(notification)
-  if (index > -1) {
-    notifications.value.splice(index, 1)
+  if (index > -1) notifications.value.splice(index, 1)
+}
+
+const getRedirectPath = (user: AuthUser): string => {
+  if (user.provider) {
+    return '/Dashboard'
   }
+  return '/'
 }
 
-// ✅ Redirection unique vers Dashboard.vue
-const redirectBasedOnService = (serviceType: string): void => {
-  setTimeout(() => {
-    router.push('/dashboard/dashboard')
-  }, 1500)
-}
+const handleSubmit = async (form$: any): Promise<void> => {
+  const data = form$.data
 
-const login = (user: User): void => {
-  localStorage.setItem('currentUser', JSON.stringify(user))
-  localStorage.setItem('authToken', 'mock-jwt-token')
-  updateSharedUserData(user)
-  redirectBasedOnService(user.serviceType)
-}
-
-const updateSharedUserData = (user: User): void => {
-  const event = new CustomEvent('userDataUpdated', { detail: { user } })
-  window.dispatchEvent(event)
-  sessionStorage.setItem('currentUserData', JSON.stringify(user))
-}
-
-const findUserByLogin = (login: string, password: string): User | null => {
-  const users = JSON.parse(localStorage.getItem('presso_users') || '[]')
-  const mockUsers = getMockUsers()
-  const allUsers = users.length ? users : mockUsers
-
-  return allUsers.find((user: User) =>
-    (user.phone === login || user.email === login) &&
-    user.password === password
-  ) || null
-}
-
-const getMockUsers = (): User[] => {
-  return [
-    {
-      id: 'user_1',
-      name: 'Jean Dupont',
-      displayName: 'Jean Dupont',
-      first_name: 'Jean',
-      last_name: 'Dupont',
-      companyName: 'Pressing Jean',
-      phone: '+33612345678',
-      email: 'jean.dupont@example.com',
-      password: 'password123',
-      serviceType: 'pressing-linge',
-      type: 'pressing-linge',
-      city: 'Abidjan',
-      adresse: '',
-      quartier: '',
-      role: 'owner',
-      isVerified: false,
-      statut_kyc: 'non_verifie',
-      phone_verified_at: new Date().toISOString(),
-      date_inscription: new Date().toISOString(),
-      currentShopId: 'shop_1',
-      shops: [
-        {
-          id: 'shop_1',
-          name: 'Pressing Jean',
-          prestations: ['pressing-linge', 'blanchisserie']
-        }
-      ],
-      bankAccounts: [],
-      joinDate: new Date().toISOString(),
-    },
-  ]
-}
-
-const handleSubmit = async (): Promise<void> => {
-  if (!formValid.value) {
-    showNotification('error', 'Formulaire invalide', 'Veuillez remplir tous les champs requis')
+  if (!data.login || !data.password) {
+    showNotification('error', 'Formulaire invalide', 'Veuillez remplir tous les champs requis.')
     return
   }
 
   isLoading.value = true
-  await new Promise(resolve => setTimeout(resolve, 1500))
-
+  
   try {
-    const user = findUserByLogin(formData.value.login, formData.value.password)
-    if (user) {
-      login(user)
-      showNotification('success', 'Connexion réussie', 'Vous allez être redirigé vers votre Dashboard...')
-    } else {
-      showNotification('error', 'Échec de connexion', 'Email/téléphone ou mot de passe incorrect')
-    }
-  } catch (error) {
-    showNotification('error', 'Erreur', 'Une erreur est survenue. Veuillez réessayer.')
+    const response = await authStore.login(data.login, data.password)
+    showNotification('success', 'Connexion réussie', 'Redirection en cours...')
+    setTimeout(() => {
+      router.push(getRedirectPath(response.user))
+    }, 1000)
+  } catch (error: any) {
+    const detail = error?.response?.data?.detail || 'Email/téléphone ou mot de passe incorrect'
+    showNotification('error', 'Échec de connexion', detail)
   } finally {
     isLoading.value = false
-  }
-}
-
-const togglePasswordVisibility = (): void => {
-  showPassword.value = !showPassword.value
-}
-
-const navigateToRegister = (): void => {
-  localStorage.setItem('authMode', 'register')
-  router.push('/inscription')
-}
-
-const goBack = (): void => {
-  router.push('/')
-}
-
-const particleStyle = (index: number) => {
-  const size = Math.random() * 6 + 2
-  const duration = Math.random() * 20 + 10
-  const delay = Math.random() * 5
-  const opacity = Math.random() * 0.3 + 0.1
-
-  return {
-    width: `${size}px`,
-    height: `${size}px`,
-    animationDuration: `${duration}s`,
-    animationDelay: `${delay}s`,
-    opacity: opacity.toString(),
-    left: `${Math.random() * 100}%`,
   }
 }
 
@@ -312,4 +182,331 @@ onMounted(() => {
 })
 </script>
 
-<style src="@/Assets/AssetsCommun/Authentification.css"></style>
+<style>
+/* ============================================
+   THÈME VUEFORM - COULEURS PRESSO (BLEU)
+   ============================================ */
+
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Variables CSS Vueform - BLEU Presso */
+:root {
+  --vf-primary: #039AE3;
+  --vf-primary-darker: #0B61B0;
+  --vf-danger: #EF4444;
+  --vf-danger-lighter: #FEE2E2;
+  --vf-success: #039AE3;
+  --vf-success-lighter: rgba(3, 154, 227, 0.1);
+  --vf-bg-input: #FFFFFF;
+  --vf-bg-input-hover: #FFFFFF;
+  --vf-bg-input-focus: #FFFFFF;
+  --vf-bg-disabled: #F4F7FB;
+  --vf-bg-selected: rgba(3, 154, 227, 0.08);
+  --vf-border-color-input: #E5E7EB;
+  --vf-border-color-input-hover: #039AE3;
+  --vf-border-color-input-focus: #039AE3;
+  --vf-color-input: #1F2937;
+  --vf-color-placeholder: #9CA3AF;
+  --vf-ring-width: 3px;
+  --vf-ring-color: rgba(3, 154, 227, 0.15);
+  --vf-radius-input: 8px;
+  --vf-radius-btn: 24px;
+  --vf-min-height-input: 48px;
+  --vf-bg-btn: #039AE3;
+  --vf-bg-btn-hover: #0B61B0;
+  --vf-color-btn: #FFFFFF;
+}
+
+/* Override des boutons Vueform */
+.vf-btn {
+  background: var(--vf-bg-btn) !important;
+  border: none !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  border-radius: var(--vf-radius-btn) !important;
+}
+
+.vf-btn:hover:not(:disabled) {
+  background: var(--vf-bg-btn-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(3, 154, 227, 0.3);
+}
+
+.vf-input-group:focus-within {
+  box-shadow: 0 0 0 var(--vf-ring-width) var(--vf-ring-color);
+}
+
+.vf-multiselect-option.is-selected {
+  background: var(--vf-primary) !important;
+  color: white !important;
+}
+
+.vf-checkbox-check.is-checked {
+  background: var(--vf-primary) !important;
+  border-color: var(--vf-primary) !important;
+}
+
+.vf-element-description {
+  color: #6B7280 !important;
+  font-size: 13px !important;
+  margin-top: 6px !important;
+}
+
+/* Wrapper pour champ mot de passe avec bouton œil */
+.password-field-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Bouton toggle visibilité mot de passe */
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: #6B7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+  z-index: 10;
+}
+
+.password-toggle-btn:hover {
+  color: #039AE3;
+}
+
+.password-toggle-btn i {
+  font-size: 16px;
+}
+</style>
+
+<style scoped>
+/* ============================================
+   STYLES PAGE CONNEXION - STYLE UPWORK
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.presso-auth-page {
+  min-height: 100vh;
+  background: #E3F2FB;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Header avec logo */
+.presso-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  padding: 0 32px;
+  z-index: 100;
+}
+
+.logo-link {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  height: 40px;
+  width: auto;
+}
+
+/* Contenu principal */
+.presso-main {
+  min-height: 100vh;
+  padding-top: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 40px;
+}
+
+/* Formulaire */
+.form-container {
+  width: 100%;
+  max-width: 440px;
+  padding: 40px 20px;
+}
+
+.presso-vueform {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 40px 32px;
+}
+
+.form-title {
+  font-size: 28px !important;
+  font-weight: 600 !important;
+  color: #1F2937 !important;
+  margin: 0 !important;
+  text-align: center;
+}
+
+.form-subtitle {
+  font-size: 14px !important;
+  color: #6B7280 !important;
+  margin: 8px 0 0 0 !important;
+  text-align: center;
+}
+
+.form-divider {
+  border: none !important;
+  height: 1px !important;
+  background: #E5E7EB !important;
+  margin: 24px 0 !important;
+}
+
+.field-description {
+  font-size: 13px !important;
+  color: #6B7280 !important;
+  margin: -8px 0 16px 0 !important;
+}
+
+/* Mot de passe oublié */
+.forgot-password-container {
+  text-align: right !important;
+  margin: -8px 0 16px 0 !important;
+}
+
+.forgot-link {
+  color: #039AE3;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+/* Lien inscription */
+.register-text {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 14px;
+  color: #6B7280;
+}
+
+.register-link {
+  color: #039AE3;
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.register-link:hover {
+  text-decoration: underline;
+}
+
+/* ============================================
+   NOTIFICATIONS
+   ============================================ */
+
+.presso-notification {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideIn 0.3s ease;
+  max-width: 400px;
+}
+
+.presso-notification.success {
+  background: #D1FAE5;
+  border: 1px solid #86EFAC;
+  color: #065F46;
+}
+
+.presso-notification.error {
+  background: #FEE2E2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.notification-content p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 4px;
+  opacity: 0.7;
+}
+
+.notification-close:hover {
+  opacity: 1;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 500px) {
+  .presso-header {
+    padding: 0 16px;
+  }
+
+  .logo {
+    height: 32px;
+  }
+
+  .form-container {
+    padding: 24px 16px;
+  }
+
+  .presso-vueform {
+    padding: 32px 24px;
+  }
+
+  .form-title {
+    font-size: 24px !important;
+  }
+
+  .presso-notification {
+    left: 16px;
+    right: 16px;
+    max-width: none;
+    top: 80px;
+  }
+}
+</style>
