@@ -53,129 +53,167 @@
 
         <!-- Navigation -->
         <nav class="nav-menu">
-          <!-- Onglet Tableau de bord -->
-          <button @click="navigateTo('/Dashboard')" :class="['nav-item', {
-            'nav-item-active': isActive('/Dashboard'),
-            'nav-item-elevated': isActive('/Dashboard'),
-            'nav-item-collapsed': isSidebarCollapsed
-          }]" :title="isSidebarCollapsed ? 'Tableau de bord' : ''">
-            <div class="nav-icon">
-              <i class="fas fa-chart-line"></i>
-            </div>
-            <span class="nav-text" v-if="!isSidebarCollapsed">Tableau de bord</span>
-            <div class="active-indicator" v-if="isActive('/Dashboard')"></div>
-          </button>
-
-          <!-- Onglet Commandes -->
-          <button @click="navigateTo('/Dashboard/Commandes')" :class="['nav-item', {
-            'nav-item-active': isActive('/Dashboard/Commandes'),
-            'nav-item-elevated': isActive('/Dashboard/Commandes'),
-            'nav-item-collapsed': isSidebarCollapsed
-          }]" :title="isSidebarCollapsed ? 'Commandes' : ''">
-            <div class="nav-icon">
-              <i class="fas fa-shopping-bag"></i>
-            </div>
-            <span class="nav-text" v-if="!isSidebarCollapsed">Commandes</span>
-            <div class="nav-badge" v-if="pendingOrdersCount > 0 && !isSidebarCollapsed">{{ pendingOrdersCount }}</div>
-            <div class="nav-badge-collapsed" v-if="pendingOrdersCount > 0 && isSidebarCollapsed">{{ pendingOrdersCount }}</div>
-            <div class="active-indicator" v-if="isActive('/dashboard/commandes')"></div>
-          </button>
-
-          <!-- Onglet Services -->
-          <button @click="navigateTo('/dashboard/services')" :class="['nav-item', {
-            'nav-item-active': isActive('/dashboard/services'),
-            'nav-item-elevated': isActive('/dashboard/services'),
-            'nav-item-collapsed': isSidebarCollapsed
-          }]" :title="isSidebarCollapsed ? 'Mes Services' : ''">
-            <div class="nav-icon">
-              <i class="fas fa-concierge-bell"></i>
-            </div>
-            <span class="nav-text" v-if="!isSidebarCollapsed">Mes Services</span>
-            <div class="active-indicator" v-if="isActive('/dashboard/services')"></div>
-          </button>
-
-          <!--  Nouvel onglet Statistiques -->
-          <button @click="navigateTo('/dashboard/statistics')" :class="['nav-item', {
-            'nav-item-active': isActive('/dashboard/statistics'),
-            'nav-item-elevated': isActive('/dashboard/statistics'),
-            'nav-item-collapsed': isSidebarCollapsed
-          }]" :title="isSidebarCollapsed ? 'Mes Statistiques' : ''">
-            <div class="nav-icon">
-              <i class="fas fa-chart-bar"></i>
-            </div>
-            <span class="nav-text" v-if="!isSidebarCollapsed">Mes Statistiques</span>
-            <div class="active-indicator" v-if="isActive('/dashboard/statistics')"></div>
-          </button>
-
-          <!-- Nouvel onglet Notifications -->
-          <button @click="navigateTo('/dashboard/notifications')" :class="['nav-item', {
-            'nav-item-active': isActive('/dashboard/notifications'),
-            'nav-item-elevated': isActive('/dashboard/notifications'),
-            'nav-item-collapsed': isSidebarCollapsed
-          }]" :title="isSidebarCollapsed ? 'Notifications' : ''">
-            <div class="nav-icon">
+          <!-- ═══════════════════════════════════════════════════════════ -->
+          <!-- ACCÈS RAPIDES (Toujours visibles) -->
+          <!-- ═══════════════════════════════════════════════════════════ -->
+          <div class="quick-access" :class="{ 'quick-access-collapsed': isSidebarCollapsed }">
+            <!-- Tableau de bord -->
+            <button @click="navigateTo('/Dashboard')" :class="['quick-btn', { 'quick-btn-active': isActive('/Dashboard') }]" :title="isSidebarCollapsed ? 'Tableau de bord' : ''">
+              <i class="fas fa-home"></i>
+              <span v-if="!isSidebarCollapsed">Accueil</span>
+            </button>
+            <!-- Notifications (Cloche) -->
+            <button @click="navigateTo('/dashboard/notifications')" :class="['quick-btn notification-btn', { 'quick-btn-active': isActive('/dashboard/notifications') }]" :title="isSidebarCollapsed ? 'Notifications' : ''">
               <i class="fas fa-bell"></i>
+              <span v-if="!isSidebarCollapsed">Alertes</span>
+              <div class="notification-badge" v-if="unreadNotifications > 0">{{ unreadNotifications }}</div>
+            </button>
+          </div>
+
+          <!-- ═══════════════════════════════════════════════════════════ -->
+          <!-- MODULE: GESTION INTERNE -->
+          <!-- ═══════════════════════════════════════════════════════════ -->
+          <div class="nav-module" v-if="!isSidebarCollapsed">
+            <button class="module-header" @click="toggleModule('gestion')" :class="{ 'module-open': expandedModules.gestion }">
+              <div class="module-icon">
+                <i class="fas fa-tasks"></i>
+              </div>
+              <span class="module-title">Gestion Interne</span>
+              <i class="fas fa-chevron-down module-chevron" :class="{ 'chevron-rotated': expandedModules.gestion }"></i>
+            </button>
+            <div class="module-content" v-show="expandedModules.gestion">
+              <!-- Commandes -->
+              <button @click="navigateToSubitem('/Dashboard/Commandes', 'gestion')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/Dashboard/Commandes') }]">
+                <i class="fas fa-shopping-bag"></i>
+                <span>Commandes</span>
+                <div class="nav-badge" v-if="pendingOrdersCount > 0">{{ pendingOrdersCount }}</div>
+              </button>
+              <!-- Portefeuille -->
+              <button v-if="!isManager" @click="navigateToSubitem('/dashboard/portefeuille', 'gestion')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/portefeuille') }]">
+                <i class="fas fa-wallet"></i>
+                <span>Portefeuille</span>
+                <div class="nav-badge wallet-badge" v-if="walletBalance > 0">{{ walletBalance }}€</div>
+              </button>
             </div>
-            <span class="nav-text" v-if="!isSidebarCollapsed">Notifications</span>
-            <div class="nav-badge" v-if="unreadNotifications > 0 && !isSidebarCollapsed">{{ unreadNotifications }}</div>
-            <div class="nav-badge-collapsed" v-if="unreadNotifications > 0 && isSidebarCollapsed">{{ unreadNotifications }}</div>
-            <div class="active-indicator" v-if="isActive('/dashboard/notifications')"></div>
+          </div>
+          <!-- Collapsed: Commandes icon only -->
+          <button v-if="isSidebarCollapsed" @click="navigateTo('/Dashboard/Commandes')" :class="['nav-item', 'nav-item-collapsed', { 'nav-item-active': isActive('/Dashboard/Commandes') }]" title="Commandes">
+            <div class="nav-icon"><i class="fas fa-shopping-bag"></i></div>
+            <div class="nav-badge-collapsed" v-if="pendingOrdersCount > 0">{{ pendingOrdersCount }}</div>
           </button>
 
-          <!-- Nouvel onglet Portefeuille -->
-          <button v-if="!isManager" @click="navigateTo('/dashboard/portefeuille')" :class="['nav-item', {
-            'nav-item-active': isActive('/dashboard/portefeuille'),
-            'nav-item-elevated': isActive('/dashboard/portefeuille'),
-            'nav-item-collapsed': isSidebarCollapsed
-          }]" :title="isSidebarCollapsed ? 'Mon Portefeuille' : ''">
-            <div class="nav-icon">
-              <i class="fas fa-wallet"></i>
+          <!-- ═══════════════════════════════════════════════════════════ -->
+          <!-- MODULE: RELATION CLIENT -->
+          <!-- ═══════════════════════════════════════════════════════════ -->
+          <div class="nav-module" v-if="!isSidebarCollapsed">
+            <button class="module-header" @click="toggleModule('relation')" :class="{ 'module-open': expandedModules.relation }">
+              <div class="module-icon">
+                <i class="fas fa-users"></i>
+              </div>
+              <span class="module-title">Relation Client</span>
+              <i class="fas fa-chevron-down module-chevron" :class="{ 'chevron-rotated': expandedModules.relation }"></i>
+            </button>
+            <div class="module-content" v-show="expandedModules.relation">
+              <!-- Annuaire Clients -->
+              <button @click="navigateToSubitem('/dashboard/clients', 'relation')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/clients') }]">
+                <i class="fas fa-address-book"></i>
+                <span>Annuaire Clients</span>
+              </button>
+              <!-- Avis & Témoignages -->
+              <button @click="navigateToSubitem('/dashboard/avis', 'relation')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/avis') }]">
+                <i class="fas fa-star"></i>
+                <span>Avis & Témoignages</span>
+                <div class="nav-badge rating-badge">{{ userRating }}</div>
+              </button>
+              <!-- Marketing -->
+              <button @click="navigateToSubitem('/dashboard/marketing', 'relation')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/marketing') }]">
+                <i class="fas fa-bullhorn"></i>
+                <span>Marketing</span>
+              </button>
             </div>
-            <span class="nav-text" v-if="!isSidebarCollapsed">Mon Portefeuille</span>
-            <div class="nav-badge wallet-badge" v-if="walletBalance > 0 && !isSidebarCollapsed">€{{ walletBalance }}</div>
-            <div class="nav-badge-collapsed wallet-badge" v-if="walletBalance > 0 && isSidebarCollapsed">€</div>
-            <div class="active-indicator" v-if="isActive('/dashboard/portefeuille')"></div>
+          </div>
+          <!-- Collapsed: Relation Client icon only -->
+          <button v-if="isSidebarCollapsed" @click="navigateTo('/dashboard/clients')" :class="['nav-item', 'nav-item-collapsed', { 'nav-item-active': isActive('/dashboard/clients') || isActive('/dashboard/avis') || isActive('/dashboard/marketing') }]" title="Relation Client">
+            <div class="nav-icon"><i class="fas fa-users"></i></div>
           </button>
 
-          <!-- Nouvel onglet Avis -->
-          <button @click="navigateTo('/dashboard/avis')" :class="['nav-item', {
-            'nav-item-active': isActive('/dashboard/avis'),
-            'nav-item-elevated': isActive('/dashboard/avis'),
-            'nav-item-collapsed': isSidebarCollapsed
-          }]" :title="isSidebarCollapsed ? 'Mes Avis' : ''">
-            <div class="nav-icon">
-              <i class="fas fa-star"></i>
+          <!-- ═══════════════════════════════════════════════════════════ -->
+          <!-- MODULE: RESSOURCES HUMAINES -->
+          <!-- ═══════════════════════════════════════════════════════════ -->
+          <div class="nav-module" v-if="!isSidebarCollapsed">
+            <button class="module-header" @click="toggleModule('rh')" :class="{ 'module-open': expandedModules.rh }">
+              <div class="module-icon">
+                <i class="fas fa-user-tie"></i>
+              </div>
+              <span class="module-title">Ressources Humaines</span>
+              <i class="fas fa-chevron-down module-chevron" :class="{ 'chevron-rotated': expandedModules.rh }"></i>
+            </button>
+            <div class="module-content" v-show="expandedModules.rh">
+              <!-- Employés -->
+              <button @click="navigateToSubitem('/dashboard/employes', 'rh')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/employes') }]">
+                <i class="fas fa-id-badge"></i>
+                <span>Employés</span>
+              </button>
+              <!-- Planning -->
+              <button @click="navigateToSubitem('/dashboard/planning', 'rh')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/planning') }]">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Planning</span>
+              </button>
             </div>
-            <span class="nav-text" v-if="!isSidebarCollapsed">Mes Avis</span>
-            <div class="nav-badge rating-badge" v-if="!isSidebarCollapsed">{{ userRating }}</div>
-            <div class="nav-badge-collapsed rating-badge" v-if="isSidebarCollapsed">{{ userRating }}</div>
-            <div class="active-indicator" v-if="isActive('/dashboard/avis')"></div>
+          </div>
+          <!-- Collapsed: RH icon only -->
+          <button v-if="isSidebarCollapsed" @click="navigateTo('/dashboard/employes')" :class="['nav-item', 'nav-item-collapsed', { 'nav-item-active': isActive('/dashboard/employes') || isActive('/dashboard/planning') }]" title="Ressources Humaines">
+            <div class="nav-icon"><i class="fas fa-user-tie"></i></div>
           </button>
 
-          <!-- Nouvel onglet Profile -->
-          <button @click="navigateTo('/dashboard/profile')" :class="['nav-item', {
-            'nav-item-active': isActive('/dashboard/profile'),
-            'nav-item-elevated': isActive('/dashboard/profile'),
-            'nav-item-collapsed': isSidebarCollapsed
-          }]" :title="isSidebarCollapsed ? 'Profil' : ''">
-            <div class="nav-icon">
-              <i class="fas fa-user"></i>
-            </div>
-            <span class="nav-text" v-if="!isSidebarCollapsed">Profil</span>
-            <div class="active-indicator" v-if="isActive('/dashboard/profile')"></div>
+          <!-- ═══════════════════════════════════════════════════════════ -->
+          <!-- ANALYSE ET RAPPORTS (Direct - Style module) -->
+          <!-- ═══════════════════════════════════════════════════════════ -->
+          <div class="nav-module-single" v-if="!isSidebarCollapsed">
+            <button class="module-header module-single" @click="navigateTo('/dashboard/statistics')" :class="{ 'module-active': isActive('/dashboard/statistics') }">
+              <div class="module-icon">
+                <i class="fas fa-chart-pie"></i>
+              </div>
+              <span class="module-title">Analyse et Rapports</span>
+            </button>
+          </div>
+          <!-- Collapsed: Analyse icon only -->
+          <button v-if="isSidebarCollapsed" @click="navigateTo('/dashboard/statistics')" :class="['nav-item', 'nav-item-collapsed', { 'nav-item-active': isActive('/dashboard/statistics') }]" title="Analyse et Rapports">
+            <div class="nav-icon"><i class="fas fa-chart-pie"></i></div>
           </button>
 
-          <!-- Nouvel onglet Paramètres -->
-          <button @click="navigateTo('/dashboard/parametres')" :class="['nav-item', {
-            'nav-item-active': isActive('/dashboard/parametres'),
-            'nav-item-elevated': isActive('/dashboard/parametres'),
-            'nav-item-collapsed': isSidebarCollapsed
-          }]" :title="isSidebarCollapsed ? 'Paramètres' : ''">
-            <div class="nav-icon">
-              <i class="fas fa-cog"></i>
+          <!-- ═══════════════════════════════════════════════════════════ -->
+          <!-- MODULE: CONFIGURATION -->
+          <!-- ═══════════════════════════════════════════════════════════ -->
+          <div class="nav-module" v-if="!isSidebarCollapsed">
+            <button class="module-header" @click="toggleModule('config')" :class="{ 'module-open': expandedModules.config }">
+              <div class="module-icon">
+                <i class="fas fa-cog"></i>
+              </div>
+              <span class="module-title">Configuration</span>
+              <i class="fas fa-chevron-down module-chevron" :class="{ 'chevron-rotated': expandedModules.config }"></i>
+            </button>
+            <div class="module-content" v-show="expandedModules.config">
+              <!-- Mes Services -->
+              <button @click="navigateToSubitem('/dashboard/services', 'config')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/services') }]">
+                <i class="fas fa-concierge-bell"></i>
+                <span>Mes Services</span>
+              </button>
+              <!-- Profil -->
+              <button @click="navigateToSubitem('/dashboard/profile', 'config')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/profile') }]">
+                <i class="fas fa-user"></i>
+                <span>Profil</span>
+              </button>
+              <!-- Paramètres -->
+              <button @click="navigateToSubitem('/dashboard/parametres', 'config')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/parametres') }]">
+                <i class="fas fa-sliders-h"></i>
+                <span>Paramètres</span>
+              </button>
             </div>
-            <span class="nav-text" v-if="!isSidebarCollapsed">Paramètres</span>
-            <div class="active-indicator" v-if="isActive('/dashboard/parametres')"></div>
+          </div>
+          <!-- Collapsed: Config icon only -->
+          <button v-if="isSidebarCollapsed" @click="navigateTo('/dashboard/services')" :class="['nav-item', 'nav-item-collapsed', { 'nav-item-active': isActive('/dashboard/services') || isActive('/dashboard/profile') || isActive('/dashboard/parametres') }]" title="Configuration">
+            <div class="nav-icon"><i class="fas fa-cog"></i></div>
           </button>
         </nav>
 
@@ -295,6 +333,28 @@ const showLogoutModal = ref(false)
 const isLoggingOut = ref(false)
 const isSidebarCollapsed = ref(false)
 const notificationInterval = ref<number | null>(null)
+
+// États des modules dépliables (initialisé vide, sera défini au montage)
+const expandedModules = ref({
+  gestion: false,
+  relation: false,
+  rh: false,
+  config: false
+})
+
+// Mapping des routes vers les modules
+const routeToModule: Record<string, 'gestion' | 'relation' | 'rh' | 'config'> = {
+  '/Dashboard/Commandes': 'gestion',
+  '/dashboard/portefeuille': 'gestion',
+  '/dashboard/clients': 'relation',
+  '/dashboard/avis': 'relation',
+  '/dashboard/marketing': 'relation',
+  '/dashboard/employes': 'rh',
+  '/dashboard/planning': 'rh',
+  '/dashboard/services': 'config',
+  '/dashboard/profile': 'config',
+  '/dashboard/parametres': 'config'
+}
 
 // Données utilisateur
 const displayUser = ref<User | null>(null)
@@ -580,8 +640,47 @@ const toggleSidebarCollapse = () => {
   localStorage.setItem('sidebarCollapsed', JSON.stringify(isSidebarCollapsed.value))
 }
 
+const toggleModule = (moduleName: 'gestion' | 'relation' | 'rh' | 'config') => {
+  expandedModules.value[moduleName] = !expandedModules.value[moduleName]
+  // Sauvegarder l'état dans localStorage
+  saveModulesState()
+}
+
+const saveModulesState = () => {
+  localStorage.setItem('expandedModules', JSON.stringify(expandedModules.value))
+}
+
+const loadModulesState = () => {
+  const saved = localStorage.getItem('expandedModules')
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved)
+      expandedModules.value = { ...expandedModules.value, ...parsed }
+    } catch {
+      // Ignorer les erreurs de parsing
+    }
+  }
+}
+
+const openModuleForCurrentRoute = () => {
+  const currentPath = route.path
+  const moduleName = routeToModule[currentPath]
+  if (moduleName) {
+    expandedModules.value[moduleName] = true
+    saveModulesState()
+  }
+}
+
 const navigateTo = (path: string) => {
   sidebarOpen.value = false
+  router.push(path)
+}
+
+const navigateToSubitem = (path: string, moduleName: 'gestion' | 'relation' | 'rh' | 'config') => {
+  sidebarOpen.value = false
+  // Garder le module ouvert
+  expandedModules.value[moduleName] = true
+  saveModulesState()
   router.push(path)
 }
 
@@ -698,6 +797,11 @@ onMounted(() => {
   if (savedState) {
     isSidebarCollapsed.value = JSON.parse(savedState)
   }
+
+  // Charger l'état des modules dépliables
+  loadModulesState()
+  // Ouvrir le module correspondant à la route actuelle
+  openModuleForCurrentRoute()
 
   // Calculer les compteurs initiaux
   updatePendingOrdersCount()

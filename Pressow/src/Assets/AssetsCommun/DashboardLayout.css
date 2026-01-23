@@ -320,6 +320,100 @@
   max-height: 10px;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* ACCÈS RAPIDES (Toujours visibles) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.quick-access {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.quick-access-collapsed {
+  flex-direction: column;
+  align-items: center;
+}
+
+.quick-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  font-family: inherit;
+}
+
+.quick-access-collapsed .quick-btn {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  flex: none;
+}
+
+.quick-btn i {
+  font-size: 16px;
+}
+
+.quick-btn:hover {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #4f46e5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+}
+
+.quick-btn-active {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+}
+
+.quick-btn-active:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  color: white;
+}
+
+/* Notification Bell */
+.notification-btn {
+  position: relative;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  border: 2px solid white;
+  animation: pulse 2s infinite;
+}
+
+.quick-access-collapsed .notification-badge {
+  top: -2px;
+  right: -2px;
+  padding: 1px 4px;
+  font-size: 9px;
+  min-width: 16px;
+}
+
 .nav-item {
   width: 100%;
   display: flex;
@@ -515,6 +609,197 @@
 .nav-item-collapsed .active-indicator {
   top: 8px;
   right: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* MODULES DÉPLIABLES (Accordéon) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.nav-module {
+  margin-bottom: 8px;
+}
+
+.module-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  border: none;
+  background: transparent;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.module-header:hover {
+  background: rgba(37, 99, 235, 0.05);
+  color: #2563eb;
+}
+
+.module-header.module-open {
+  background: rgba(37, 99, 235, 0.08);
+  color: #2563eb;
+}
+
+.module-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  border-radius: 8px;
+  color: #4f46e5;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.module-header:hover .module-icon,
+.module-header.module-open .module-icon {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: white;
+  transform: scale(1.05);
+}
+
+.module-title {
+  flex: 1;
+  text-align: left;
+}
+
+.module-chevron {
+  font-size: 12px;
+  transition: transform 0.3s ease;
+  color: #94a3b8;
+}
+
+.module-chevron.chevron-rotated {
+  transform: rotate(180deg);
+  color: #2563eb;
+}
+
+.module-content {
+  padding: 4px 0 4px 20px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Sous-éléments de navigation */
+.nav-subitem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 4px;
+  font-family: inherit;
+  position: relative;
+}
+
+.nav-subitem i {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.nav-subitem:hover {
+  background: rgba(37, 99, 235, 0.06);
+  color: #2563eb;
+  padding-left: 20px;
+}
+
+.nav-subitem:hover i {
+  color: #2563eb;
+}
+
+.nav-subitem-active {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.nav-subitem-active i {
+  color: white;
+}
+
+.nav-subitem-active:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  color: white;
+  padding-left: 16px;
+}
+
+.nav-subitem .nav-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  margin-left: auto;
+}
+
+.nav-subitem-active .nav-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.nav-subitem-active .rating-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.nav-subitem-active .wallet-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+/* Module simple (sans accordéon) */
+.nav-module-single {
+  margin-bottom: 8px;
+}
+
+.module-header.module-single {
+  cursor: pointer;
+}
+
+.module-header.module-single:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.module-header.module-active {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.module-header.module-active .module-icon {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.module-header.module-active .module-title {
+  color: white;
 }
 
 @keyframes pulse {

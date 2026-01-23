@@ -1,4 +1,4 @@
-a<template>
+<template>
   <div class="presso-auth-page">
     <!-- Notifications -->
     <div v-for="(notification, index) in notifications" :key="index" class="presso-notification" :class="notification.type">
