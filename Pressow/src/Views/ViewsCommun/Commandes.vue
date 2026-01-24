@@ -1,1273 +1,1561 @@
 <template>
-    <DashboardLayout>
-        <div class="orders-page">
-            <div class="orders-page-header">
-                <div>
-                    <h1 class="orders-page-title">Commandes</h1>
-                    <p class="orders-page-description">Gérez toutes vos commandes en un seul endroit</p>
-                </div>
-            </div>
-
-            <!-- Filtres sticky -->
-            <div class="orders-filters-card" :class="{ 'sticky-filters': isFiltersSticky }" ref="filtersCard">
-                <div class="filters-content">
-                    <div class="filters-header">
-                        <div class="active-filters">
-                            <div class="filter-group">
-                                <label class="filter-label">Filtrer par statut :</label>
-                                <div class="filter-buttons">
-                                    <button v-for="status in statusFilters" :key="status.value" class="BtnGlobal2"
-                                        :class="{ 'active-filter': filters.status === status.value }"
-                                        @click="toggleStatusFilter(status.value)">
-                                        <i :class="getStatusIcon(status.value)"></i>
-                                        {{ status.label }}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <button class="more-filters-btn BtnGlobal2" @click="showFiltersModal = true">
-                            <i class="fas fa-sliders-h"></i>
-                            Plus de filtres
-                            <span v-if="activeFiltersCount > 0" class="filters-badge">
-                                {{ activeFiltersCount }}
-                            </span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Liste des commandes -->
-            <div class="orders-list">
-                <!-- En-tête avec sélection multiple -->
-                <div class="list-header">
-                    <div class="selection-info" v-if="selectedOrders.length > 0">
-                        <input type="checkbox" :checked="allSelected" @change="toggleSelectAll"
-                            class="select-all-checkbox" />
-                        <span class="selection-count">{{ selectedOrders.length }} commande(s) sélectionnée(s)</span>
-                    </div>
-                    <div class="total-info" v-else>
-                        {{ filteredOrders.length }} commande(s) trouvée(s)
-                    </div>
-                    
-                    <div class="bulk-actions">
-                        <button v-if="selectedOrders.length > 0" class="BtnGlobal2 delete-bulk-btn"
-                            @click="openDeleteModal('bulk', null, selectedOrders.length)">
-                            <i class="fas fa-trash"></i>
-                            Supprimer ({{ selectedOrders.length }})
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Cartes des commandes -->
-                <div v-for="order in filteredOrders" :key="order.id" class="orders-order-card"
-                    :class="{ 'selected': isOrderSelected(order.id) }" @click="toggleOrderSelection(order.id)">
-                    <div class="card-content">
-                        <div class="order-header">
-                            <div class="order-header-left">
-                                <input type="checkbox" :checked="isOrderSelected(order.id)"
-                                    @change="toggleOrderSelection(order.id)" class="order-checkbox" @click.stop />
-                                <div>
-                                    <div class="order-id-section">
-                                        <h3 class="order-id">#{{ order.id }}</h3>
-                                        <div class="badges-container">
-                                            <span :class="['status-badge', getStatusBadgeClass(order.status)]">
-                                                <i :class="getStatusIcon(order.status)"></i>
-                                                {{ getStatusLabel(order.status) }}
-                                            </span>
-                                            <span :class="['service-badge', getServiceBadgeClass(order.serviceType)]">
-                                                <i :class="getServiceIcon(order.serviceType)"></i>
-                                                {{ getServiceLabel(order.serviceType) }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <p class="order-date">{{ formatDateTime(order.createdAt) }}</p>
-                                </div>
-                            </div>
-                            <div class="order-header-actions">
-                                <button class="BtnGlobal2 details-btn" @click.stop="openOrderDetails(order)">
-                                    <i class="fas fa-eye"></i>
-                                    Détails
-                                </button>
-                                <button v-if="!isOrderSelected(order.id)" class="BtnGlobal2 delete-btn"
-                                    @click.stop="openDeleteModal('single', order.id, 1)">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="order-body">
-                            <div class="order-info-col">
-                                <div class="order-info-row">
-                                    <span class="order-info-label">
-                                        <i class="fas fa-box"></i>
-                                        Articles:
-                                    </span>
-                                    <span class="order-info-value">{{ order.totalItems }} article(s)</span>
-                                </div>
-
-                                <div class="order-info-row">
-                                    <span class="order-info-label">
-                                        <i class="fas fa-map-marker-alt"></i>
-                                        Adresse:
-                                    </span>
-                                    <span class="order-info-value">{{ order.address }}</span>
-                                </div>
-
-                                <div v-if="order.status !== 'refused'" class="order-info-row">
-                                    <span class="order-info-label">
-                                        <i class="fas fa-calendar-alt"></i>
-                                        Livraison:
-                                    </span>
-                                    <span class="order-info-value">
-                                        {{ formatDate(order.deliveryDate) }}
-                                        <span v-if="order.deliveryTime" class="delivery-time">à {{ order.deliveryTime
-                                            }}</span>
-                                    </span>
-                                </div>
-
-                                <div class="refusal-info" v-if="order.status === 'refused' && order.refusalReason">
-                                    <div class="order-info-row">
-                                        <span class="order-info-label refusal-label">
-                                            <i class="fas fa-exclamation-triangle"></i>
-                                            Motif de refus:
-                                        </span>
-                                        <span class="refusal-reason">{{ order.refusalReason }}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="order-info-col-right">
-                                <p class="order-price">
-                                    <i class="fas fa-money-bill-wave"></i>
-                                    {{ order.price.toFixed(2) }} €
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- État vide -->
-                <div v-if="filteredOrders.length === 0" class="empty-state">
-                    <div class="card-content">
-                        <div class="empty-icon">
-                            <i class="fas fa-box-open"></i>
-                        </div>
-                        <p class="empty-message">Aucune commande trouvée</p>
-                        <button @click="clearAllFilters" class="BtnGlobal2">
-                            <i class="fas fa-times"></i>
-                            Réinitialiser les filtres
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal des détails de commande -->
-            <div v-if="selectedOrder" class="modal-overlay" @click="closeOrderDetails">
-                <div class="modern-modal" @click.stop>
-                    <div class="modal-header">
-                        <div class="modal-title-section">
-                            <div class="modal-title-info">
-                                <div class="modal-icon">
-                                    <i class="fas fa-receipt"></i>
-                                </div>
-                                <div class="modal-title-content">
-                                    <h2 class="modal-title">Commande #{{ selectedOrder.id }}</h2>
-                                    <p class="modal-subtitle">Créée le {{ formatDateTime(selectedOrder.createdAt) }}</p>
-                                </div>
-                            </div>
-                            <div class="modal-header-badges">
-                                <span :class="['modal-badge', getStatusBadgeClass(selectedOrder.status)]">
-                                    <i :class="getStatusIcon(selectedOrder.status)"></i>
-                                    {{ getStatusLabel(selectedOrder.status) }}
-                                </span>
-                                <span :class="['modal-badge', getServiceBadgeClass(selectedOrder.serviceType)]">
-                                    <i :class="getServiceIcon(selectedOrder.serviceType)"></i>
-                                    {{ getServiceLabel(selectedOrder.serviceType) }}
-                                </span>
-                            </div>
-                        </div>
-                        <button class="modal-close-btn" @click="closeOrderDetails">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-
-                    <div class="modal-content">
-                        <!-- Articles Section -->
-                        <div class="modal-section">
-                            <div class="section-header">
-                                <i class="fas fa-box section-icon"></i>
-                                <h3 class="section-title">Articles commandés</h3>
-                            </div>
-                            <div class="items-list">
-                                <div v-for="(item, index) in selectedOrder.itemsWithQuantities" :key="index"
-                                    class="item-row">
-                                    <div class="item-info">
-                                        <span class="item-name">{{ item.name }}</span>
-                                        <span class="item-quantity">×{{ item.quantity }}</span>
-                                    </div>
-                                    <span class="item-price" v-if="item.price">
-                                        {{ (item.price * item.quantity).toFixed(2) }} €
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="items-total">
-                                <span>Total articles:</span>
-                                <span class="total-count">{{ selectedOrder.totalItems }} article(s)</span>
-                            </div>
-                        </div>
-
-                        <!-- Address Section -->
-                        <div class="modal-section">
-                            <div class="section-header">
-                                <i class="fas fa-map-marker-alt section-icon"></i>
-                                <h3 class="section-title">Adresse</h3>
-                            </div>
-                            <div class="address-content">
-                                <div class="address-details">
-                                    <i class="fas fa-user"></i>
-                                    <span>{{ selectedOrder.customer?.name || 'Client' }}</span>
-                                </div>
-                                <div class="address-details">
-                                    <i class="fas fa-phone"></i>
-                                    <span>{{ selectedOrder.customer?.phone || 'Non spécifié' }}</span>
-                                </div>
-                                <div class="address-details">
-                                    <i class="fas fa-map-pin"></i>
-                                    <span>{{ selectedOrder.address }}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Price Summary -->
-                        <div class="modal-section price-section">
-                            <div class="section-header">
-                                <i class="fas fa-money-bill-wave section-icon"></i>
-                                <h3 class="section-title">Récapitulatif</h3>
-                            </div>
-                            <div class="price-summary">
-                                <div class="price-row total-row">
-                                    <span class="price-label">Montant total:</span>
-                                    <span class="price-value">{{ selectedOrder.price.toFixed(2) }} €</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Action Buttons - Nouvelle logique simplifiée -->
-                        <div class="modal-actions" v-if="selectedOrder.status === 'pending'">
-                            <button @click="acceptOrder(selectedOrder.id)" class="action-btn accept-btn BtnGlobal2">
-                                <i class="fas fa-check"></i>
-                                Accepter la commande
-                            </button>
-                            <button @click="openRefusalModal(selectedOrder)" class="action-btn refuse-btn BtnGlobal2">
-                                <i class="fas fa-times"></i>
-                                Refuser
-                            </button>
-                        </div>
-
-                        <!-- Nouvelle logique simplifiée pour les commandes acceptées -->
-                        <div v-if="selectedOrder.status === 'accepted'" class="modal-actions">
-                            <button @click="completeOrder(selectedOrder)" class="action-btn accept-btn BtnGlobal2">
-                                <i class="fas fa-flag-checkered"></i>
-                                Marquer comme terminée
-                            </button>
-                        </div>
-
-                        <!-- Close button for completed orders -->
-                        <div v-if="selectedOrder.status === 'completed'" class="modal-actions">
-                            <button @click="closeOrderDetails" class="action-btn BtnGlobal2">
-                                <i class="fas fa-times"></i>
-                                Fermer
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal de refus -->
-            <div v-if="showRefusalModal" class="modal-overlay" @click="closeRefusalModal">
-                <div class="modern-modal" @click.stop>
-                    <div class="modal-header">
-                        <div class="header-main">
-                            <h2 class="dialog-title">
-                                <i class="fas fa-exclamation-triangle title-icon"></i>
-                                Refuser la commande
-                            </h2>
-                        </div>
-                    </div>
-                    <div class="modal-content">
-                        <div class="refusal-modal">
-                            <p class="refusal-question">Pourquoi souhaitez-vous refuser la commande #{{ refusalOrder?.id
-                                }} ?</p>
-                            <textarea v-model="refusalReason" placeholder="Veuillez saisir le motif de refus..."
-                                class="refusal-textarea" rows="4"></textarea>
-                            <div class="refusal-actions">
-                                <button @click="closeRefusalModal" class="BtnGlobal2">
-                                    Annuler
-                                </button>
-                                <button @click="confirmRefuseOrder" :disabled="!refusalReason.trim()"
-                                    class="BtnGlobal2">
-                                    <i class="fas fa-times"></i>
-                                    Confirmer le refus
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal de confirmation de suppression -->
-            <div v-if="showDeleteModal" class="modal-overlay" @click="closeDeleteModal">
-                <div class="modern-modal" @click.stop>
-                    <div class="modal-header">
-                        <div class="header-main">
-                            <h2 class="dialog-title">
-                                <i class="fas fa-trash title-icon"></i>
-                                Confirmer la suppression
-                            </h2>
-                        </div>
-                    </div>
-                    <div class="modal-content">
-                        <div class="delete-modal">
-                            <p class="delete-question">
-                                Êtes-vous sûr de vouloir supprimer 
-                                <span v-if="deleteModalData.type === 'bulk'">
-                                    {{ deleteModalData.count }} commande(s) ?
-                                </span>
-                                <span v-else>
-                                    la commande #{{ deleteModalData.orderId }} ?
-                                </span>
-                            </p>
-                            <p class="delete-warning">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                Cette action est irréversible.
-                            </p>
-                            <div class="delete-actions">
-                                <button @click="closeDeleteModal" class="BtnGlobal2 cancel-btn">
-                                    <i class="fas fa-times"></i>
-                                    Annuler
-                                </button>
-                                <button @click="confirmDelete" class="BtnGlobal2 confirm-delete-btn">
-                                    <i class="fas fa-trash"></i>
-                                    Supprimer
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal de succès -->
-            <div v-if="showSuccessModal" class="modal-overlay" @click="closeSuccessModal">
-                <div class="modern-modal" @click.stop>
-                    <div class="modal-header">
-                        <div class="header-main">
-                            <h2 class="dialog-title">
-                                <i class="fas fa-check-circle modal-icon"></i>
-                                Succès
-                            </h2>
-                        </div>
-                    </div>
-                    <div class="modal-content">
-                        <div class="success-modal">
-                            <p class="success-message">{{ successMessage }}</p>
-                            <div class="success-actions">
-                                <button @click="closeSuccessModal" class="BtnGlobal2 success-btn">
-                                    <i class="fas fa-check"></i>
-                                    OK
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal des filtres avancés -->
-            <div v-if="showFiltersModal" class="modal-overlay" @click="closeFiltersModal">
-                <div class="modern-modal filters-modal" @click.stop>
-                    <div class="modal-header">
-                        <div class="header-main">
-                            <h2 class="dialog-title">
-                                <i class="fas fa-filter title-icon"></i>
-                                Filtres avancés
-                            </h2>
-                        </div>
-                        <button class="modal-close-btn" @click="closeFiltersModal">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="modal-content">
-                        <div class="filters-modal-content">
-                            <!-- Filtres par date -->
-                            <div class="filter-group">
-                                <div class="filter-group-header">
-                                    <label class="filter-label">Période</label>
-                                </div>
-                                <div class="date-filters-section">
-                                    <div class="date-filters">
-                                        <div class="date-input-group">
-                                            <label class="date-label">Du</label>
-                                            <input type="date" v-model="filters.dateRange.start" class="date-input"
-                                                @change="applyDateFilter">
-                                        </div>
-                                        <div class="date-input-group">
-                                            <label class="date-label">Au</label>
-                                            <input type="date" v-model="filters.dateRange.end" class="date-input"
-                                                @change="applyDateFilter">
-                                        </div>
-                                        <button @click="clearDateFilter" class="BtnGlobal2 clear-date-btn">
-                                            <i class="fas fa-times"></i>
-                                            Effacer
-                                        </button>
-                                    </div>
-
-                                    <!-- Filtre rapide par période -->
-                                    <div class="quick-date-filters-section">
-                                        <label class="quick-date-label">Période rapide</label>
-                                        <div class="quick-date-filters">
-                                            <button v-for="period in quickDateFilters" :key="period.value"
-                                                @click="setQuickDateFilter(period.value)"
-                                                :class="filters.quickDateFilter === period.value ? 'active-filter' : ''"
-                                                class="BtnGlobal2 quick-date-btn">
-                                                {{ period.label }}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Filtres par type de service (dynamiques) -->
-                            <div class="filter-group">
-                                <div class="filter-group-header">
-                                    <label class="filter-label">Type de service</label>
-                                </div>
-                                <div class="filter-buttons">
-                                    <button class="BtnGlobal2" v-for="service in activeServiceFilters" :key="service.value"
-                                        :class="filters.serviceType === service.value ? 'active-filter' : ''"
-                                        @click="toggleServiceFilter(service.value)">
-                                        <i :class="getServiceIcon(service.value)"></i>
-                                        {{ service.label }}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="filters-modal-actions">
-                            <button @click="clearAllFilters" class="BtnGlobal2 clear-all-btn">
-                                <i class="fas fa-times"></i>
-                                Réinitialiser tous les filtres
-                            </button>
-                            <button @click="closeFiltersModal" class="BtnGlobal2 apply-btn">
-                                <i class="fas fa-check"></i>
-                                Appliquer les filtres
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <DashboardLayout>
+    <div class="orders-page">
+      <!-- Header -->
+      <header class="page-header">
+        <div class="header-info">
+          <h1>Commandes</h1>
+          <p>Gérez vos commandes et livraisons</p>
         </div>
-    </DashboardLayout>
+        <button class="refresh-btn" @click="refreshOrders" :disabled="isLoading">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :class="{ spinning: isLoading }">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+            <path d="M16 16h5v5"/>
+          </svg>
+        </button>
+      </header>
+
+      <!-- Tabs de statuts -->
+      <div class="status-tabs">
+        <button 
+          v-for="tab in statusTabs" 
+          :key="tab.value"
+          :class="['tab-btn', { active: activeTab === tab.value }]"
+          @click="activeTab = tab.value"
+        >
+          <span class="tab-label">{{ tab.label }}</span>
+          <span class="tab-count" :class="tab.countClass">{{ getTabCount(tab.value) }}</span>
+        </button>
+      </div>
+
+      <!-- Liste des commandes -->
+      <div class="orders-list" v-if="!isLoading">
+        <div 
+          v-for="order in filteredOrders" 
+          :key="order.id" 
+          class="order-card"
+          @click="openOrderDetail(order)"
+        >
+          <div class="order-header">
+            <div class="order-info">
+              <span class="order-numero">#{{ order.numero }}</span>
+              <span class="order-date">{{ formatDate(order.created) }}</span>
+            </div>
+            <div class="order-badges">
+              <span class="status-badge" :class="getStatusClass(order.statut)">
+                {{ order.statut_display }}
+              </span>
+              <span class="payment-badge" :class="getPaymentClass(order.payment_status)">
+                {{ order.payment_status_display }}
+              </span>
+            </div>
+          </div>
+
+          <div class="order-body">
+            <div class="client-info">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              <span>{{ order.client.first_name }} {{ order.client.last_name }}</span>
+            </div>
+            <div class="address-info">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span>{{ order.adresse_collecte }}</span>
+            </div>
+          </div>
+
+          <div class="order-footer">
+            <span class="order-amount">{{ formatCurrency(order.total_estime) }}</span>
+            <div class="order-actions">
+              <span v-if="order.statut === 'ready' && !order.is_delivery_validated" class="otp-hint">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                OTP requis
+              </span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chevron">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- État vide -->
+        <div v-if="filteredOrders.length === 0" class="empty-state">
+          <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+          <p>Aucune commande</p>
+          <span>Les commandes apparaîtront ici</span>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div v-else class="loading-state">
+        <div class="spinner"></div>
+        <p>Chargement des commandes...</p>
+      </div>
+
+      <!-- Modal détail commande -->
+      <div v-if="selectedOrder" class="modal-overlay" @click.self="closeOrderDetail">
+        <div class="modal order-detail-modal">
+          <div class="modal-header">
+            <div class="modal-title">
+              <h3>#{{ selectedOrder.numero }}</h3>
+              <span class="status-badge large" :class="getStatusClass(selectedOrder.statut)">
+                {{ selectedOrder.statut_display }}
+              </span>
+            </div>
+            <button class="modal-close" @click="closeOrderDetail">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <!-- Infos client -->
+            <section class="detail-section">
+              <h4>Client</h4>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <span class="label">Nom</span>
+                  <span class="value">{{ selectedOrder.client.first_name }} {{ selectedOrder.client.last_name }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">Téléphone</span>
+                  <span class="value">{{ selectedOrder.client.phone_number }}</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- Adresses -->
+            <section class="detail-section">
+              <h4>Adresses</h4>
+              <div class="address-block">
+                <div class="address-item">
+                  <span class="address-type collecte">Collecte</span>
+                  <p>{{ selectedOrder.adresse_collecte }}</p>
+                  <span class="creneau" v-if="selectedOrder.creneau_collecte">{{ selectedOrder.creneau_collecte }}</span>
+                </div>
+                <div class="address-item" v-if="selectedOrder.adresse_livraison">
+                  <span class="address-type livraison">Livraison</span>
+                  <p>{{ selectedOrder.adresse_livraison }}</p>
+                  <span class="creneau" v-if="selectedOrder.creneau_livraison">{{ selectedOrder.creneau_livraison }}</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- Articles -->
+            <section class="detail-section" v-if="selectedOrder.items && selectedOrder.items.length">
+              <h4>Articles ({{ selectedOrder.items.length }})</h4>
+              <div class="items-list">
+                <div v-for="item in selectedOrder.items" :key="item.id" class="item-row">
+                  <div class="item-info">
+                    <span class="item-name">{{ item.service_name }} - {{ item.article_type_name }}</span>
+                    <span class="item-qty">x{{ item.quantity }}</span>
+                  </div>
+                  <span class="item-price">{{ formatCurrency(item.total_price) }}</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- Récapitulatif financier -->
+            <section class="detail-section financial">
+              <h4>Récapitulatif</h4>
+              <div class="financial-grid">
+                <div class="fin-row">
+                  <span>Total estimé</span>
+                  <span>{{ formatCurrency(selectedOrder.total_estime) }}</span>
+                </div>
+                <div class="fin-row" v-if="selectedOrder.frais_livraison">
+                  <span>Frais de livraison</span>
+                  <span>{{ formatCurrency(selectedOrder.frais_livraison) }}</span>
+                </div>
+                <div class="fin-row total" v-if="selectedOrder.provider_net_amount">
+                  <span>Vous recevrez</span>
+                  <span class="net-amount">{{ formatCurrency(selectedOrder.provider_net_amount) }}</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- Section OTP (pour commandes prêtes) -->
+            <section 
+              class="detail-section otp-section" 
+              v-if="showOTPSection"
+            >
+              <h4>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                Validation de livraison
+              </h4>
+
+              <!-- OTP non généré -->
+              <div v-if="!selectedOrder.has_delivery_otp" class="otp-generate">
+                <p>Générez un code OTP à communiquer au client pour valider la livraison.</p>
+                <button class="btn-primary" @click="generateOTP" :disabled="isOTPLoading">
+                  {{ isOTPLoading ? 'Génération...' : 'Générer le code OTP' }}
+                </button>
+              </div>
+
+              <!-- OTP généré, en attente de validation -->
+              <div v-else-if="!selectedOrder.is_delivery_validated" class="otp-validate">
+                <p class="otp-info">Le code OTP a été envoyé au client. Demandez-lui le code pour valider la livraison.</p>
+                
+                <div class="otp-input-group">
+                  <input 
+                    type="text" 
+                    v-model="otpCode"
+                    maxlength="6"
+                    placeholder="Code à 6 chiffres"
+                    class="otp-input"
+                    @keyup.enter="validateOTP"
+                  />
+                  <button 
+                    class="btn-validate" 
+                    @click="validateOTP" 
+                    :disabled="otpCode.length !== 6 || isOTPLoading"
+                  >
+                    {{ isOTPLoading ? 'Validation...' : 'Valider' }}
+                  </button>
+                </div>
+
+                <button class="btn-text" @click="regenerateOTP" :disabled="isOTPLoading">
+                  Renvoyer le code
+                </button>
+              </div>
+
+              <!-- Livraison validée -->
+              <div v-else class="otp-validated">
+                <div class="validated-badge">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                  <span>Livraison validée</span>
+                </div>
+                <p class="validated-date">
+                  Validé le {{ formatDateTime(selectedOrder.delivery_otp_validated_at) }}
+                </p>
+              </div>
+            </section>
+          </div>
+
+          <!-- Actions selon le statut -->
+          <div class="modal-footer">
+            <!-- Commande en attente -->
+            <template v-if="selectedOrder.statut === 'pending'">
+              <button class="btn-reject" @click="openRejectModal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+                Refuser
+              </button>
+              <button class="btn-accept" @click="handleAccept" :disabled="isLoading">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Accepter
+              </button>
+            </template>
+
+            <!-- Commande confirmée -->
+            <template v-else-if="selectedOrder.statut === 'confirmed'">
+              <button class="btn-secondary" @click="closeOrderDetail">Fermer</button>
+              <button class="btn-primary" @click="handleMarkCollected" :disabled="isLoading">
+                Marquer comme ramassée
+              </button>
+            </template>
+
+            <!-- Commande collectée -->
+            <template v-else-if="selectedOrder.statut === 'collected'">
+              <button class="btn-secondary" @click="closeOrderDetail">Fermer</button>
+              <button class="btn-primary" @click="handleMarkInProgress" :disabled="isLoading">
+                Démarrer le traitement
+              </button>
+            </template>
+
+            <!-- Commande en cours -->
+            <template v-else-if="selectedOrder.statut === 'in_progress'">
+              <button class="btn-secondary" @click="closeOrderDetail">Fermer</button>
+              <button class="btn-primary" @click="handleMarkReady" :disabled="isLoading">
+                Marquer comme prête
+              </button>
+            </template>
+
+            <!-- Commande prête -->
+            <template v-else-if="selectedOrder.statut === 'ready'">
+              <button class="btn-secondary" @click="closeOrderDetail">Fermer</button>
+            </template>
+
+            <!-- Commande livrée -->
+            <template v-else>
+              <button class="btn-secondary" @click="closeOrderDetail">Fermer</button>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de refus -->
+      <div v-if="showRejectModal" class="modal-overlay" @click.self="closeRejectModal">
+        <div class="modal reject-modal">
+          <div class="modal-header">
+            <h3>Refuser la commande</h3>
+            <button class="modal-close" @click="closeRejectModal">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <p>Sélectionnez une raison de refus :</p>
+            
+            <div class="reason-options">
+              <label 
+                v-for="reason in CANCELLATION_REASONS" 
+                :key="reason.value"
+                class="reason-option"
+                :class="{ selected: rejectReason === reason.value }"
+              >
+                <input 
+                  type="radio" 
+                  :value="reason.value" 
+                  v-model="rejectReason"
+                  name="reject-reason"
+                />
+                <span class="reason-label">{{ reason.label }}</span>
+              </label>
+            </div>
+
+            <div class="form-group" v-if="rejectReason === 'other'">
+              <label>Précisez la raison</label>
+              <textarea 
+                v-model="rejectNotes" 
+                placeholder="Expliquez la raison du refus..."
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn-secondary" @click="closeRejectModal">Annuler</button>
+            <button 
+              class="btn-reject" 
+              @click="handleReject" 
+              :disabled="!rejectReason || isLoading"
+            >
+              Confirmer le refus
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toast de succès -->
+      <transition name="toast">
+        <div v-if="toastMessage" class="toast" :class="toastType">
+          <svg v-if="toastType === 'success'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+          <span>{{ toastMessage }}</span>
+        </div>
+      </transition>
+    </div>
+  </DashboardLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import DashboardLayout from '@/Components/ComponentsCommun/DashboardLayout.vue'
+import { useOrdersStore, CANCELLATION_REASONS } from '@/stores/orders'
+import type { Order, OrderStatus } from '@/stores/orders'
 
-// Types
-interface ItemWithQuantity {
-  name: string
-  quantity: number
-  price: number
-}
+const ordersStore = useOrdersStore()
 
-interface Customer {
-  name: string
-  phone: string
-}
-
-interface StatusHistoryItem {
-  status: string
-  label: string
-  timestamp: string
-}
-
-interface Order {
-  id: string
-  serviceType: string
-  items: string[]
-  itemsWithQuantities: ItemWithQuantity[]
-  totalItems: number
-  address: string
-  deliveryDate: string
-  deliveryTime?: string
-  requestedDate?: string
-  requestedTime?: string
-  price: number
-  status: string
-  createdAt: string
-  specialInstructions?: string
-  customer: Customer
-  statusHistory?: StatusHistoryItem[]
-  refusalReason?: string
-  refusedAt?: string
-}
-
-interface Service {
-  id: string
-  name: string
-  category: string
-  price: number
-  duration: string
-  description: string
-  active: boolean
-}
-
-// Données réactives
-const orders = ref<Order[]>([])
-const services = ref<Service[]>([])
+// État local
+const activeTab = ref<'all' | 'to_collect' | 'in_progress' | 'ready' | 'delivered'>('all')
 const selectedOrder = ref<Order | null>(null)
-const selectedOrders = ref<string[]>([])
-const showRefusalModal = ref(false)
-const refusalOrder = ref<Order | null>(null)
-const refusalReason = ref('')
-const showFiltersModal = ref(false)
-const isFiltersSticky = ref(false)
-const filtersCard = ref<HTMLElement | null>(null)
+const showRejectModal = ref(false)
+const rejectReason = ref('')
+const rejectNotes = ref('')
+const otpCode = ref('')
+const toastMessage = ref('')
+const toastType = ref<'success' | 'error'>('success')
 
-// Nouveaux états pour les modales
-const showDeleteModal = ref(false)
-const deleteModalData = ref<{
-  type: string
-  orderId: string | null
-  count: number
-}>({
-  type: 'single',
-  orderId: null,
-  count: 0
-})
+// Tabs de statut
+const statusTabs = [
+  { value: 'all', label: 'Toutes', countClass: '' },
+  { value: 'to_collect', label: 'À ramasser', countClass: 'pending' },
+  { value: 'in_progress', label: 'En cours', countClass: 'progress' },
+  { value: 'ready', label: 'Prêtes', countClass: 'ready' },
+  { value: 'delivered', label: 'Livrées', countClass: 'delivered' },
+] as const
 
-const showSuccessModal = ref(false)
-const successMessage = ref('')
-
-const filters = ref({
-  status: 'all',
-  serviceType: 'all',
-  dateRange: {
-    start: '',
-    end: ''
-  },
-  quickDateFilter: ''
-})
-
-// Constantes - Filtres simplifiés (seulement 3 statuts)
-const statusFilters = [
-  { value: 'all', label: 'Toutes' },
-  { value: 'pending', label: 'En attente' },
-  { value: 'accepted', label: 'Acceptées' },
-  { value: 'completed', label: 'Terminées' }
-]
-
-const quickDateFilters = [
-  { value: 'today', label: "Aujourd'hui" },
-  { value: 'week', label: 'Cette semaine' },
-  { value: 'month', label: 'Ce mois' },
-  { value: 'last-month', label: 'Mois dernier' }
-]
-
-// Computed - Filtres de services dynamiques basés sur les services actifs
-const activeServiceFilters = computed(() => {
-  const baseFilters = [
-    { value: 'all', label: 'Tous les services' }
-  ]
-  
-  // Ajouter seulement les services actifs
-  const activeServices = services.value
-    .filter(service => service.active)
-    .map(service => ({
-      value: service.id, // Utiliser l'ID du service comme valeur
-      label: service.name,
-      category: service.category
-    }))
-  
-  return [...baseFilters, ...activeServices]
-})
-
-const activeFiltersCount = computed(() => {
-  let count = 0
-  if (filters.value.status !== 'all') count++
-  if (filters.value.serviceType !== 'all') count++
-  if (filters.value.dateRange.start && filters.value.dateRange.end) count++
-  if (filters.value.quickDateFilter) count++
-  return count
-})
+// Computed
+const isLoading = computed(() => ordersStore.isLoading)
+const isOTPLoading = computed(() => ordersStore.isOTPLoading)
+const orders = computed(() => ordersStore.orders)
 
 const filteredOrders = computed(() => {
-  let filtered = orders.value
-
-  // Filtre par statut (seulement 3 statuts maintenant)
-  if (filters.value.status !== 'all') {
-    filtered = filtered.filter(order => order.status === filters.value.status)
+  switch (activeTab.value) {
+    case 'to_collect':
+      return orders.value.filter(o => ['pending', 'confirmed'].includes(o.statut))
+    case 'in_progress':
+      return orders.value.filter(o => ['collected', 'in_progress'].includes(o.statut))
+    case 'ready':
+      return orders.value.filter(o => o.statut === 'ready')
+    case 'delivered':
+      return orders.value.filter(o => o.statut === 'delivered')
+    default:
+      return orders.value
   }
-
-  // Filtre par type de service (dynamique basé sur les services actifs)
-  if (filters.value.serviceType !== 'all') {
-    filtered = filtered.filter(order => order.serviceType === filters.value.serviceType)
-  }
-
-  // Filtre par date
-  if (filters.value.dateRange.start && filters.value.dateRange.end) {
-    const startDate = new Date(filters.value.dateRange.start)
-    const endDate = new Date(filters.value.dateRange.end)
-    endDate.setHours(23, 59, 59, 999)
-
-    filtered = filtered.filter(order => {
-      const orderDate = new Date(order.createdAt)
-      return orderDate >= startDate && orderDate <= endDate
-    })
-  }
-
-  return filtered
 })
 
-const allSelected = computed(() => {
-  return filteredOrders.value.length > 0 && selectedOrders.value.length === filteredOrders.value.length
+const showOTPSection = computed(() => {
+  if (!selectedOrder.value) return false
+  const validStatuses: OrderStatus[] = ['collected', 'in_progress', 'ready', 'delivered']
+  return validStatuses.includes(selectedOrder.value.statut)
 })
 
 // Méthodes
-// Filtres
-const toggleStatusFilter = (status: string) => {
-  filters.value.status = filters.value.status === status ? 'all' : status
-}
-
-const toggleServiceFilter = (serviceType: string) => {
-  filters.value.serviceType = filters.value.serviceType === serviceType ? 'all' : serviceType
-}
-
-const applyDateFilter = () => {
-  filters.value.quickDateFilter = ''
-}
-
-const clearDateFilter = () => {
-  filters.value.dateRange = { start: '', end: '' }
-  filters.value.quickDateFilter = ''
-}
-
-const setQuickDateFilter = (period: string) => {
-  filters.value.quickDateFilter = period
-  const today = new Date()
-
-  switch (period) {
-    case 'today': {
-      const todayStr = today.toISOString().split('T')[0]!
-      filters.value.dateRange = { start: todayStr, end: todayStr }
-      break
-    }
-    case 'week': {
-      const startOfWeek = new Date(today)
-      startOfWeek.setDate(today.getDate() - today.getDay())
-      const endOfWeek = new Date(startOfWeek)
-      endOfWeek.setDate(startOfWeek.getDate() + 6)
-      filters.value.dateRange = {
-        start: startOfWeek.toISOString().split('T')[0]!,
-        end: endOfWeek.toISOString().split('T')[0]!
-      }
-      break
-    }
-    case 'month': {
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-      filters.value.dateRange = {
-        start: startOfMonth.toISOString().split('T')[0]!,
-        end: endOfMonth.toISOString().split('T')[0]!
-      }
-      break
-    }
-    case 'last-month': {
-      const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-      const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0)
-      filters.value.dateRange = {
-        start: startOfLastMonth.toISOString().split('T')[0]!,
-        end: endOfLastMonth.toISOString().split('T')[0]!
-      }
-      break
-    }
+function getTabCount(tab: string): number {
+  switch (tab) {
+    case 'to_collect':
+      return orders.value.filter(o => ['pending', 'confirmed'].includes(o.statut)).length
+    case 'in_progress':
+      return orders.value.filter(o => ['collected', 'in_progress'].includes(o.statut)).length
+    case 'ready':
+      return orders.value.filter(o => o.statut === 'ready').length
+    case 'delivered':
+      return orders.value.filter(o => o.statut === 'delivered').length
+    default:
+      return orders.value.length
   }
 }
 
-const clearAllFilters = () => {
-  filters.value = {
-    status: 'all',
-    serviceType: 'all',
-    dateRange: { start: '', end: '' },
-    quickDateFilter: ''
-  }
-}
-
-// Sélection multiple
-const toggleOrderSelection = (orderId: string) => {
-  const index = selectedOrders.value.indexOf(orderId)
-  if (index > -1) {
-    selectedOrders.value.splice(index, 1)
-  } else {
-    selectedOrders.value.push(orderId)
-  }
-}
-
-const toggleSelectAll = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  if (target.checked) {
-    selectedOrders.value = filteredOrders.value.map(order => order.id)
-  } else {
-    selectedOrders.value = []
-  }
-}
-
-const isOrderSelected = (orderId: string) => {
-  return selectedOrders.value.includes(orderId)
-}
-
-// Gestion des modales de suppression
-const openDeleteModal = (type: string, orderId: string | null, count: number) => {
-  deleteModalData.value = {
-    type,
-    orderId,
-    count
-  }
-  showDeleteModal.value = true
-}
-
-const closeDeleteModal = () => {
-  showDeleteModal.value = false
-  deleteModalData.value = {
-    type: 'single',
-    orderId: null,
-    count: 0
-  }
-}
-
-const confirmDelete = () => {
-  if (deleteModalData.value.type === 'bulk') {
-    // Suppression groupée
-    orders.value = orders.value.filter(order => !selectedOrders.value.includes(order.id))
-    selectedOrders.value = []
-    showSuccessModal.value = true
-    successMessage.value = `${deleteModalData.value.count} commande(s) ont été supprimée(s) avec succès.`
-  } else {
-    // Suppression simple
-    orders.value = orders.value.filter(order => order.id !== deleteModalData.value.orderId)
-    showSuccessModal.value = true
-    successMessage.value = `La commande #${deleteModalData.value.orderId} a été supprimée avec succès.`
-  }
-  saveOrders()
-  closeDeleteModal()
-}
-
-// Gestion de la modale de succès
-const closeSuccessModal = () => {
-  showSuccessModal.value = false
-  successMessage.value = ''
-}
-
-// Fonction pour émettre l'événement de mise à jour du badge
-const emitOrderStatusChange = (orderId: string, newStatus: string) => {
-  window.dispatchEvent(new CustomEvent('orderStatusChanged', {
-    detail: { orderId, newStatus }
-  }))
-}
-
-// Gestion des commandes
-const openOrderDetails = (order: Order) => {
-  selectedOrder.value = order
-}
-
-const closeOrderDetails = () => {
-  selectedOrder.value = null
-}
-
-const acceptOrder = (orderId: string) => {
-  const order = orders.value.find(o => o.id === orderId)
-  if (order) {
-    order.status = 'accepted'
-    if (!order.statusHistory) order.statusHistory = []
-    order.statusHistory.push({
-      status: 'accepted',
-      label: 'Commande acceptée',
-      timestamp: new Date().toISOString()
-    })
-    saveOrders()
-    showSuccessModal.value = true
-    successMessage.value = `La commande #${orderId} a été acceptée avec succès.`
-    
-    // Émettre l'événement pour mettre à jour le badge
-    emitOrderStatusChange(orderId, 'accepted')
-  }
-}
-
-// Nouvelle logique simplifiée : passer directement à "terminée"
-const completeOrder = (order: Order) => {
-  if (!order) return
-  
-  if (!order.statusHistory) order.statusHistory = []
-  
-  order.status = 'completed'
-  order.statusHistory.push({
-    status: 'completed',
-    label: 'Commande terminée',
-    timestamp: new Date().toISOString()
-  })
-  
-  saveOrders()
-  showSuccessModal.value = true
-  successMessage.value = `La commande #${order.id} est maintenant terminée.`
-  
-  // Émettre l'événement pour mettre à jour le badge
-  emitOrderStatusChange(order.id, 'completed')
-  
-  closeOrderDetails()
-}
-
-const openRefusalModal = (order: Order) => {
-  refusalOrder.value = order
-  refusalReason.value = ''
-  showRefusalModal.value = true
-}
-
-const closeRefusalModal = () => {
-  showRefusalModal.value = false
-  refusalOrder.value = null
-  refusalReason.value = ''
-}
-
-const confirmRefuseOrder = () => {
-  if (refusalOrder.value && refusalReason.value.trim()) {
-    const order = orders.value.find(o => o.id === refusalOrder.value!.id)
-    if (order) {
-      order.status = 'refused'
-      order.refusalReason = refusalReason.value.trim()
-      order.refusedAt = new Date().toISOString()
-      saveOrders()
-      showSuccessModal.value = true
-      successMessage.value = `La commande #${order.id} a été refusée avec succès.`
-      
-      // Émettre l'événement pour mettre à jour le badge
-      emitOrderStatusChange(order.id, 'refused')
-      
-      closeRefusalModal()
-      closeOrderDetails()
-    }
-  }
-}
-
-// Modales
-const closeFiltersModal = () => {
-  showFiltersModal.value = false
-}
-
-// Utilitaires
-const getStatusLabel = (status: string) => {
-  const labels: Record<string, string> = {
-    pending: 'En attente',
-    accepted: 'Acceptée',
-    completed: 'Terminée',
-    refused: 'Refusée'
-  }
-  return labels[status] || status
-}
-
-const getServiceLabel = (serviceType: string) => {
-  // Si c'est un ID de service, chercher le nom correspondant
-  if (serviceType.startsWith('SRV')) {
-    const service = services.value.find(s => s.id === serviceType)
-    return service ? service.name : serviceType
-  }
-  
-  // Fallback pour les anciens types de service
-  const labels: Record<string, string> = {
-    dry_cleaning: 'Nettoyage à sec',
-    express: 'Express',
-    delicate: 'Lavage délicat',
-    standard: 'Standard'
-  }
-  return labels[serviceType] || serviceType
-}
-
-const getStatusBadgeClass = (status: string) => {
-  const classes: Record<string, string> = {
-    pending: 'badge-orange',
-    accepted: 'badge-green',
-    completed: 'badge-blue',
-    refused: 'badge-red'
+function getStatusClass(status: OrderStatus): string {
+  const classes: Record<OrderStatus, string> = {
+    pending: 'status-pending',
+    confirmed: 'status-confirmed',
+    collected: 'status-progress',
+    in_progress: 'status-progress',
+    ready: 'status-ready',
+    delivered: 'status-delivered',
+    cancelled: 'status-cancelled'
   }
   return classes[status] || ''
 }
 
-const getServiceBadgeClass = (serviceType: string) => {
-  // Tous les services ont maintenant la même classe de badge
-  return 'badge-blue'
-}
-
-const getServiceIcon = (serviceType: string) => {
-  // Icône unique pour tous les services
-  return 'fas fa-cogs'
-}
-
-const getStatusIcon = (status: string) => {
-  const icons: Record<string, string> = {
-    pending: 'fas fa-clock',
-    accepted: 'fas fa-check',
-    completed: 'fas fa-flag-checkered',
-    refused: 'fas fa-times',
-    all: 'fas fa-filter'
+function getPaymentClass(status: string): string {
+  const classes: Record<string, string> = {
+    pending: 'payment-pending',
+    paid: 'payment-paid',
+    escrow: 'payment-escrow',
+    released: 'payment-released',
+    refunded: 'payment-refunded',
+    failed: 'payment-failed'
   }
-  return icons[status] || 'fas fa-question'
+  return classes[status] || ''
 }
 
-const formatDate = (dateString: string) => {
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'decimal',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount) + ' FCFA'
+}
+
+function formatDate(dateString: string): string {
   const date = new Date(dateString)
-  return date.toLocaleDateString('fr-FR')
+  return date.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
-const formatDateTime = (dateString: string) => {
+function formatDateTime(dateString: string | undefined): string {
+  if (!dateString) return '-'
   const date = new Date(dateString)
-  return date.toLocaleString('fr-FR')
+  return date.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
-// Fonction pour obtenir la date d'aujourd'hui au format YYYY-MM-DD
-const getTodayDate = (): string => {
-  const today = new Date()
-  return today.toISOString().split('T')[0]!
+function showToast(message: string, type: 'success' | 'error' = 'success'): void {
+  toastMessage.value = message
+  toastType.value = type
+  setTimeout(() => {
+    toastMessage.value = ''
+  }, 3000)
 }
 
-// Fonction pour obtenir une date future (pour les dates de livraison)
-const getFutureDate = (daysToAdd: number): string => {
-  const date = new Date()
-  date.setDate(date.getDate() + daysToAdd)
-  return date.toISOString().split('T')[0]!
+// Navigation
+function openOrderDetail(order: Order): void {
+  selectedOrder.value = order
+  ordersStore.selectOrder(order)
+  otpCode.value = ''
 }
 
-const saveOrders = () => {
-  localStorage.setItem('presso_orders', JSON.stringify(orders.value))
-  
-  // Émettre un event pour synchroniser avec d'autres pages
-  window.dispatchEvent(new CustomEvent('ordersUpdated', {
-    detail: { orders: orders.value }
-  }))
+function closeOrderDetail(): void {
+  selectedOrder.value = null
+  ordersStore.selectOrder(null)
+  otpCode.value = ''
 }
 
-const loadOrders = () => {
-  const savedOrders = localStorage.getItem('presso_orders')
-  if (savedOrders) {
-    try {
-      orders.value = JSON.parse(savedOrders)
-    } catch (e) {
-      console.error('Erreur lors du chargement des commandes:', e)
-      orders.value = getDefaultOrders()
-      saveOrders()
-    }
-  } else {
-    orders.value = getDefaultOrders()
-    saveOrders()
+function openRejectModal(): void {
+  rejectReason.value = ''
+  rejectNotes.value = ''
+  showRejectModal.value = true
+}
+
+function closeRejectModal(): void {
+  showRejectModal.value = false
+  rejectReason.value = ''
+  rejectNotes.value = ''
+}
+
+// Actions
+async function refreshOrders(): Promise<void> {
+  try {
+    await ordersStore.fetchOrders()
+  } catch (error) {
+    showToast('Erreur lors du chargement', 'error')
   }
 }
 
-const loadServices = () => {
-  const savedServices = localStorage.getItem('presso_services')
-  if (savedServices) {
-    try {
-      services.value = JSON.parse(savedServices)
-    } catch (e) {
-      console.error('Erreur lors du chargement des services:', e)
-      // Si les services ne sont pas trouvés, on initialise avec des services par défaut
-      services.value = getDefaultServices()
-      saveServices()
-    }
-  } else {
-    services.value = getDefaultServices()
-    saveServices()
+async function handleAccept(): Promise<void> {
+  if (!selectedOrder.value) return
+  try {
+    await ordersStore.acceptOrder(selectedOrder.value.id)
+    showToast('Commande acceptée')
+    closeOrderDetail()
+  } catch (error: any) {
+    showToast(error.message || 'Erreur', 'error')
   }
 }
 
-const saveServices = () => {
-  localStorage.setItem('presso_services', JSON.stringify(services.value))
-}
-
-const getDefaultServices = (): Service[] => {
-  return [
-    {
-      id: 'SRV001',
-      name: 'Nettoyage à sec',
-      category: 'pressing',
-      price: 12.0,
-      duration: '48h',
-      description: 'Nettoyage professionnel à sec pour tous types de vêtements',
-      active: true,
-    },
-    {
-      id: 'SRV002',
-      name: 'Repassage',
-      category: 'pressing',
-      price: 8.0,
-      duration: '24h',
-      description: 'Repassage soigné et professionnel',
-      active: true,
-    },
-    {
-      id: 'SRV003',
-      name: 'Lavage et repassage',
-      category: 'laverie',
-      price: 15.0,
-      duration: '48h',
-      description: 'Service complet de lavage et repassage',
-      active: true,
-    },
-  ]
-}
-
-const getDefaultOrders = (): Order[] => {
-  const today = getTodayDate()
-  
-  return [
-    {
-      id: 'CMD001',
-      serviceType: 'SRV001', // Utiliser l'ID du service
-      items: ['Chemise blanche', 'Pantalon costume', 'Robe de soirée'],
-      itemsWithQuantities: [
-        { name: 'Chemise blanche', quantity: 2, price: 8.0 },
-        { name: 'Pantalon costume', quantity: 1, price: 12.0 },
-        { name: 'Robe de soirée', quantity: 1, price: 25.0 },
-      ],
-      totalItems: 4,
-      address: '25 Avenue des Champs, Paris 75008',
-      deliveryDate: getFutureDate(2),
-      deliveryTime: '14:00-16:00',
-      price: 45.0,
-      status: 'pending',
-      createdAt: `${today}T10:30:00`,
-      specialInstructions: 'Urgent - Évènement important',
-      customer: {
-        name: 'Jean Dupont',
-        phone: '+33 6 12 34 56 78'
-      }
-    },
-    {
-      id: 'CMD002',
-      serviceType: 'SRV002', // Utiliser l'ID du service
-      items: ['Costume 2 pièces', 'Cravate'],
-      itemsWithQuantities: [
-        { name: 'Costume 2 pièces', quantity: 1, price: 30.0 },
-        { name: 'Cravate', quantity: 2, price: 5.0 }
-      ],
-      totalItems: 3,
-      address: '10 Boulevard Saint-Germain, Paris 75005',
-      deliveryDate: getFutureDate(1),
-      deliveryTime: '16:00-18:00',
-      price: 40.0,
-      status: 'accepted',
-      createdAt: `${today}T14:20:00`,
-      specialInstructions: 'Repassage soigné',
-      customer: {
-        name: 'Marie Martin',
-        phone: '+33 6 98 76 54 32'
-      },
-      statusHistory: [
-        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T15:00:00` }
-      ]
-    },
-    {
-      id: 'CMD003',
-      serviceType: 'SRV003', // Utiliser l'ID du service
-      items: ['Linge de maison'],
-      itemsWithQuantities: [
-        { name: 'Linge de maison', quantity: 8, price: 7.5 }
-      ],
-      totalItems: 8,
-      address: '5 Rue Victor Hugo, Paris 75016',
-      deliveryDate: getFutureDate(3),
-      price: 60.0,
-      status: 'completed',
-      createdAt: `${today}T09:15:00`,
-      customer: {
-        name: 'Pierre Lambert',
-        phone: '+33 6 45 67 89 01'
-      },
-      statusHistory: [
-        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T10:00:00` },
-        { status: 'completed', label: 'Commande terminée', timestamp: `${today}T16:00:00` }
-      ]
-    },
-    {
-      id: 'CMD004',
-      serviceType: 'SRV001',
-      items: ['Veste en cuir', 'Pull en laine'],
-      itemsWithQuantities: [
-        { name: 'Veste en cuir', quantity: 1, price: 25.0 },
-        { name: 'Pull en laine', quantity: 3, price: 15.0 }
-      ],
-      totalItems: 4,
-      address: '15 Rue de Rivoli, Paris 75004',
-      deliveryDate: getFutureDate(4),
-      requestedDate: getFutureDate(1),
-      requestedTime: '11:00-13:00',
-      price: 70.0,
-      status: 'refused',
-      createdAt: `${today}T11:00:00`,
-      refusalReason: 'Service non disponible pour les articles en cuir',
-      refusedAt: `${today}T14:30:00`,
-      customer: {
-        name: 'Sophie Bernard',
-        phone: '+33 6 23 45 67 89'
-      }
-    },
-    {
-      id: 'CMD005',
-      serviceType: 'SRV002',
-      items: ['Chemisier soie', 'Jupe lin'],
-      itemsWithQuantities: [
-        { name: 'Chemisier soie', quantity: 2, price: 18.0 },
-        { name: 'Jupe lin', quantity: 1, price: 22.0 }
-      ],
-      totalItems: 3,
-      address: '8 Avenue Montaigne, Paris 75008',
-      deliveryDate: getFutureDate(2),
-      deliveryTime: '09:00-11:00',
-      price: 58.0,
-      status: 'pending',
-      createdAt: `${today}T16:45:00`,
-      specialInstructions: 'Attention aux tissus délicats',
-      customer: {
-        name: 'Claire Dubois',
-        phone: '+33 6 34 56 78 90'
-      }
-    },
-    {
-      id: 'CMD006',
-      serviceType: 'SRV003',
-      items: ['Couettes', 'Draps', 'Taies d\'oreiller'],
-      itemsWithQuantities: [
-        { name: 'Couettes', quantity: 2, price: 35.0 },
-        { name: 'Draps', quantity: 4, price: 12.0 },
-        { name: 'Taies d\'oreiller', quantity: 8, price: 6.0 }
-      ],
-      totalItems: 14,
-      address: '22 Rue du Faubourg Saint-Honoré, Paris 75008',
-      deliveryDate: getFutureDate(5),
-      price: 150.0,
-      status: 'accepted',
-      createdAt: `${today}T13:20:00`,
-      customer: {
-        name: 'Hôtel Plaza',
-        phone: '+33 1 42 68 90 12'
-      },
-      statusHistory: [
-        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T14:00:00` }
-      ]
-    },
-    {
-      id: 'CMD007',
-      serviceType: 'SRV001',
-      items: ['Costume trois pièces', 'Chemise blanche'],
-      itemsWithQuantities: [
-        { name: 'Costume trois pièces', quantity: 1, price: 45.0 },
-        { name: 'Chemise blanche', quantity: 3, price: 9.0 }
-      ],
-      totalItems: 4,
-      address: '3 Place de la Concorde, Paris 75008',
-      deliveryDate: getFutureDate(3),
-      deliveryTime: '17:00-19:00',
-      price: 72.0,
-      status: 'completed',
-      createdAt: `${today}T08:30:00`,
-      customer: {
-        name: 'Thomas Moreau',
-        phone: '+33 6 78 90 12 34'
-      },
-      statusHistory: [
-        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T09:15:00` },
-        { status: 'completed', label: 'Commande terminée', timestamp: `${today}T16:45:00` }
-      ]
-    },
-    {
-      id: 'CMD008',
-      serviceType: 'SRV002',
-      items: ['Robe de mariée'],
-      itemsWithQuantities: [
-        { name: 'Robe de mariée', quantity: 1, price: 120.0 }
-      ],
-      totalItems: 1,
-      address: '45 Avenue George V, Paris 75008',
-      deliveryDate: getFutureDate(7),
-      price: 120.0,
-      status: 'pending',
-      createdAt: `${today}T15:10:00`,
-      specialInstructions: 'TRÈS URGENT - Mariée samedi prochain',
-      customer: {
-        name: 'Élodie Petit',
-        phone: '+33 6 91 23 45 67'
-      }
-    },
-    {
-      id: 'CMD009',
-      serviceType: 'SRV003',
-      items: ['Serviettes de bain', 'Nappes'],
-      itemsWithQuantities: [
-        { name: 'Serviettes de bain', quantity: 12, price: 8.0 },
-        { name: 'Nappes', quantity: 6, price: 15.0 }
-      ],
-      totalItems: 18,
-      address: '18 Rue de la Paix, Paris 75002',
-      deliveryDate: getFutureDate(4),
-      price: 186.0,
-      status: 'accepted',
-      createdAt: `${today}T11:45:00`,
-      customer: {
-        name: 'Restaurant Le Gourmet',
-        phone: '+33 1 40 20 30 40'
-      },
-      statusHistory: [
-        { status: 'accepted', label: 'Commande acceptée', timestamp: `${today}T12:30:00` }
-      ]
-    }
-  ]
-}
-
-const handleScroll = () => {
-  if (filtersCard.value) {
-    const rect = filtersCard.value.getBoundingClientRect()
-    isFiltersSticky.value = rect.top <= 20
+async function handleReject(): Promise<void> {
+  if (!selectedOrder.value || !rejectReason.value) return
+  try {
+    const notes = rejectReason.value === 'other' ? rejectNotes.value : undefined
+    await ordersStore.rejectOrder(selectedOrder.value.id, rejectReason.value, notes)
+    showToast('Commande refusée')
+    closeRejectModal()
+    closeOrderDetail()
+  } catch (error: any) {
+    showToast(error.message || 'Erreur', 'error')
   }
 }
 
-// Écouter les événements de synchronisation
-const handleOrderStatusChange = (event: CustomEvent) => {
-  const { orderId, newStatus } = event.detail
-  const order = orders.value.find(o => o.id === orderId)
-  if (order) {
-    order.status = newStatus
-    saveOrders()
+async function handleMarkCollected(): Promise<void> {
+  if (!selectedOrder.value) return
+  try {
+    const updated = await ordersStore.markAsCollected(selectedOrder.value.id)
+    selectedOrder.value = updated
+    showToast('Commande marquée comme ramassée')
+  } catch (error: any) {
+    showToast(error.message || 'Erreur', 'error')
   }
 }
 
-// Écouter les mises à jour des services
-const handleServicesUpdated = (event: CustomEvent) => {
-  const { services: updatedServices } = event.detail
-  services.value = updatedServices
-  saveServices()
+async function handleMarkInProgress(): Promise<void> {
+  if (!selectedOrder.value) return
+  try {
+    const updated = await ordersStore.markAsInProgress(selectedOrder.value.id)
+    selectedOrder.value = updated
+    showToast('Traitement démarré')
+  } catch (error: any) {
+    showToast(error.message || 'Erreur', 'error')
+  }
 }
 
-onMounted(() => {
-  loadServices()
-  loadOrders()
-  window.addEventListener('scroll', handleScroll)
-  
-  // Écouter les changements depuis d'autres pages
-  window.addEventListener('orderStatusChanged', handleOrderStatusChange as EventListener)
-  window.addEventListener('servicesUpdated', handleServicesUpdated as EventListener)
-})
+async function handleMarkReady(): Promise<void> {
+  if (!selectedOrder.value) return
+  try {
+    const updated = await ordersStore.markAsReady(selectedOrder.value.id)
+    selectedOrder.value = updated
+    showToast('Commande prête')
+  } catch (error: any) {
+    showToast(error.message || 'Erreur', 'error')
+  }
+}
 
-onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
-  window.removeEventListener('orderStatusChanged', handleOrderStatusChange as EventListener)
-  window.removeEventListener('servicesUpdated', handleServicesUpdated as EventListener)
+// OTP
+async function generateOTP(): Promise<void> {
+  if (!selectedOrder.value) return
+  try {
+    await ordersStore.generateDeliveryOTP(selectedOrder.value.id)
+    selectedOrder.value = ordersStore.selectedOrder
+    showToast('Code OTP envoyé au client')
+  } catch (error: any) {
+    showToast(error.message || 'Erreur de génération OTP', 'error')
+  }
+}
+
+async function validateOTP(): Promise<void> {
+  if (!selectedOrder.value || otpCode.value.length !== 6) return
+  try {
+    const updated = await ordersStore.validateDeliveryOTP(selectedOrder.value.id, otpCode.value)
+    selectedOrder.value = updated
+    showToast('Livraison validée ! Paiement en cours de transfert.')
+    otpCode.value = ''
+  } catch (error: any) {
+    showToast(error.message || 'Code OTP invalide', 'error')
+  }
+}
+
+async function regenerateOTP(): Promise<void> {
+  if (!selectedOrder.value) return
+  try {
+    await ordersStore.regenerateDeliveryOTP(selectedOrder.value.id)
+    showToast('Nouveau code OTP envoyé')
+  } catch (error: any) {
+    showToast(error.message || 'Erreur', 'error')
+  }
+}
+
+// Charger les commandes au montage
+onMounted(async () => {
+  await ordersStore.fetchOrders()
 })
 </script>
 
-<style scoped src="@/Assets/AssetsCommun/Commandes.css"></style>
+<style scoped>
+/* Variables - Charte Pressow */
+.orders-page {
+  --color-primary: #37A1EF;
+  --color-primary-dark: #2589d4;
+  --color-accent: #F9A13B;
+  --color-success: #10b981;
+  --color-danger: #ef4444;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+
+  min-height: 100%;
+  background: #f8fafc;
+  padding: 1.5rem;
+}
+
+/* Header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.page-header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.page-header p {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0.25rem 0 0;
+}
+
+.refresh-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.refresh-btn svg.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Status Tabs */
+.status-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1rem;
+  overflow-x: auto;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.tab-btn.active {
+  background: var(--color-primary);
+  color: white;
+}
+
+.tab-btn.active .tab-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.tab-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 10px;
+  background: #f1f5f9;
+}
+
+.tab-count.pending { background: rgba(249, 161, 59, 0.15); color: #d97706; }
+.tab-count.progress { background: rgba(55, 161, 239, 0.15); color: #37A1EF; }
+.tab-count.ready { background: rgba(16, 185, 129, 0.15); color: #059669; }
+.tab-count.delivered { background: rgba(100, 116, 139, 0.15); color: #475569; }
+
+/* Orders List */
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.order-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+
+.order-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: rgba(55, 161, 239, 0.3);
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.order-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.order-numero {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.order-date {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.order-badges {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.status-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.status-badge.large {
+  font-size: 0.75rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.status-pending { background: rgba(249, 161, 59, 0.12); color: #d97706; }
+.status-confirmed { background: rgba(55, 161, 239, 0.12); color: #37A1EF; }
+.status-progress { background: rgba(55, 161, 239, 0.2); color: #2589d4; }
+.status-ready { background: rgba(16, 185, 129, 0.12); color: #059669; }
+.status-delivered { background: rgba(100, 116, 139, 0.12); color: #475569; }
+.status-cancelled { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+
+.payment-badge {
+  font-size: 0.625rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.payment-pending { background: #fef3c7; color: #92400e; }
+.payment-paid, .payment-escrow { background: #dcfce7; color: #166534; }
+.payment-released { background: #d1fae5; color: #065f46; }
+.payment-refunded, .payment-failed { background: #fee2e2; color: #991b1b; }
+
+.order-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 0.75rem;
+}
+
+.client-info, .address-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.client-info svg, .address-info svg {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.order-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.order-amount {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.order-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.otp-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--color-accent);
+  background: rgba(249, 161, 59, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.chevron {
+  color: #94a3b8;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.empty-state svg {
+  margin-bottom: 1rem;
+  opacity: 0.4;
+}
+
+.empty-state p {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0;
+}
+
+.empty-state span {
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  gap: 1rem;
+}
+
+.loading-state p {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e2e8f0;
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modal-title h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.modal-close:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Detail Sections */
+.detail-section {
+  margin-bottom: 1.25rem;
+}
+
+.detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.detail-section h4 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.detail-item .label {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.detail-item .value {
+  font-size: 0.875rem;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+/* Address Block */
+.address-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.address-item {
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.address-type {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+  display: inline-block;
+  margin-bottom: 0.375rem;
+}
+
+.address-type.collecte {
+  background: rgba(249, 161, 59, 0.12);
+  color: #d97706;
+}
+
+.address-type.livraison {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.address-item p {
+  font-size: 0.875rem;
+  color: #1e293b;
+  margin: 0;
+}
+
+.address-item .creneau {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* Items List */
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.item-row:last-child {
+  border-bottom: none;
+}
+
+.item-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.item-name {
+  font-size: 0.875rem;
+  color: #1e293b;
+}
+
+.item-qty {
+  font-size: 0.75rem;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+}
+
+.item-price {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+/* Financial Section */
+.financial-grid {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.875rem;
+}
+
+.fin-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.375rem 0;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.fin-row.total {
+  border-top: 1px solid #e2e8f0;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.net-amount {
+  color: var(--color-success);
+}
+
+/* OTP Section */
+.otp-section {
+  background: rgba(55, 161, 239, 0.05);
+  border: 1px solid rgba(55, 161, 239, 0.15);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.otp-section h4 {
+  color: var(--color-primary);
+  margin-bottom: 0.75rem;
+}
+
+.otp-generate p, .otp-validate p {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0 0 0.75rem;
+}
+
+.otp-info {
+  background: white;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border-left: 3px solid var(--color-primary);
+}
+
+.otp-input-group {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.otp-input {
+  flex: 1;
+  padding: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.25em;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.otp-input:focus {
+  border-color: var(--color-primary);
+}
+
+.btn-validate {
+  padding: 0.75rem 1.25rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-validate:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.btn-validate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-text:hover {
+  text-decoration: underline;
+}
+
+.otp-validated {
+  text-align: center;
+  padding: 1rem;
+}
+
+.validated-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-success);
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.validated-date {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.5rem;
+}
+
+/* Buttons */
+.btn-primary {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: #f1f5f9;
+  color: #64748b;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.btn-accept {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-success);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-accept:hover:not(:disabled) {
+  background: #059669;
+}
+
+.btn-accept:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-reject {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #fee2e2;
+  color: var(--color-danger);
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-reject:hover:not(:disabled) {
+  background: #fecaca;
+}
+
+.btn-reject:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Reject Modal */
+.reject-modal .modal-body p {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0 0 1rem;
+}
+
+.reason-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.reason-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reason-option:hover {
+  background: #f1f5f9;
+}
+
+.reason-option.selected {
+  background: rgba(239, 68, 68, 0.05);
+  border-color: var(--color-danger);
+}
+
+.reason-option input {
+  display: none;
+}
+
+.reason-label {
+  font-size: 0.875rem;
+  color: #1e293b;
+}
+
+.form-group {
+  margin-top: 0.75rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 0.375rem;
+}
+
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  resize: none;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.form-group textarea:focus {
+  border-color: var(--color-primary);
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.25rem;
+  background: #1e293b;
+  color: white;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  z-index: 2000;
+}
+
+.toast.success {
+  background: var(--color-success);
+}
+
+.toast.error {
+  background: var(--color-danger);
+}
+
+.toast-enter-active, .toast-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-enter-from, .toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(20px);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .orders-page {
+    padding: 1rem;
+  }
+
+  .status-tabs {
+    gap: 0.25rem;
+    padding: 0.25rem;
+  }
+
+  .tab-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .tab-label {
+    display: none;
+  }
+
+  .tab-btn.active .tab-label {
+    display: inline;
+  }
+
+  .modal {
+    max-height: 95vh;
+    border-radius: 16px 16px 0 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-width: 100%;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

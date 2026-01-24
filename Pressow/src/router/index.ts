@@ -34,6 +34,16 @@ const ParametresGeneral = () => import('@/Views/DashboardGeneral/Parametres.vue'
 // Onboarding (à créer)
 const OnboardingSetup = () => import('@/Views/Onboarding/OnboardingSetup.vue')
 
+// Dashboard Client
+const ClientLayout = () => import('@/Components/ComponentsClient/ClientLayout.vue')
+const ClientDashboard = () => import('@/Views/DashboardClient/ClientDashboard.vue')
+const PressingDetail = () => import('@/Views/DashboardClient/PressingDetail.vue')
+const Cart = () => import('@/Views/DashboardClient/Cart.vue')
+const Checkout = () => import('@/Views/DashboardClient/Checkout.vue')
+const ClientOrders = () => import('@/Views/DashboardClient/ClientOrders.vue')
+const OrderTracking = () => import('@/Views/DashboardClient/OrderTracking.vue')
+const ClientProfile = () => import('@/Views/DashboardClient/ClientProfile.vue')
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -223,6 +233,59 @@ const router = createRouter({
     },
 
     // ─────────────────────────────────────────────────────────────────────────
+    // DASHBOARD CLIENT
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      path: '/client',
+      component: ClientLayout,
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: '',
+          name: 'client-dashboard',
+          component: ClientDashboard,
+          meta: { title: 'Accueil - Pressow Client' }
+        },
+        {
+          path: 'pressing/:id',
+          name: 'pressing-detail',
+          component: PressingDetail,
+          meta: { title: 'Détail Pressing - Pressow' }
+        },
+        {
+          path: 'cart',
+          name: 'cart',
+          component: Cart,
+          meta: { title: 'Panier - Pressow' }
+        },
+        {
+          path: 'checkout',
+          name: 'checkout',
+          component: Checkout,
+          meta: { title: 'Paiement - Pressow' }
+        },
+        {
+          path: 'orders',
+          name: 'client-orders',
+          component: ClientOrders,
+          meta: { title: 'Mes Commandes - Pressow' }
+        },
+        {
+          path: 'orders/:id',
+          name: 'order-tracking',
+          component: OrderTracking,
+          meta: { title: 'Suivi Commande - Pressow' }
+        },
+        {
+          path: 'profile',
+          name: 'client-profile',
+          component: ClientProfile,
+          meta: { title: 'Mon Profil - Pressow' }
+        },
+      ]
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
     // REDIRECTION 404
     // ─────────────────────────────────────────────────────────────────────────
     {
@@ -287,8 +350,8 @@ router.beforeEach(async (to, from, next) => {
       const isProvider = user?.role === 'provider_owner' || user?.role === 'provider_manager'
       
       if (!isProvider) {
-        // Rediriger les clients vers l'accueil
-        return next({ name: 'home' })
+        // Rediriger les clients vers le dashboard client
+        return next({ name: 'client-dashboard' })
       }
 
       // ─────────────────────────────────────────────────────────────────────────
@@ -348,8 +411,8 @@ router.beforeEach(async (to, from, next) => {
       }
     }
     
-    // Clients redirigés vers l'accueil
-    return next({ name: 'home' })
+    // Clients redirigés vers le dashboard client
+    return next({ name: 'client-dashboard' })
   }
 
   // Continuer normalement

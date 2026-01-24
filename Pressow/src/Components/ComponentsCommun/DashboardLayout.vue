@@ -262,6 +262,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 // ====================================================================
 // TYPES ET INTERFACES
@@ -326,6 +327,7 @@ interface Notification {
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 
 // États de l'interface
 const sidebarOpen = ref(false)
@@ -696,10 +698,10 @@ const confirmLogout = async () => {
   isLoggingOut.value = true
 
   try {
-    // Simuler une déconnexion asynchrone
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    // Déconnexion via le store auth
+    await authStore.logout()
 
-    // Effacer les données utilisateur
+    // Effacer les données locales
     localStorage.removeItem('userToken')
     localStorage.removeItem('currentUser')
     sessionStorage.removeItem('currentUserData')
@@ -712,14 +714,20 @@ const confirmLogout = async () => {
     displayUser.value = null
     activeShop.value = null
 
+    // Fermer le modal AVANT la redirection
+    showLogoutModal.value = false
+    isLoggingOut.value = false
+
     // Rediriger vers la page de connexion
     router.push('/Connexion')
 
   } catch (error) {
     console.error('Erreur lors de la déconnexion:', error)
-  } finally {
-    isLoggingOut.value = false
+    // Même en cas d'erreur, on déconnecte l'utilisateur localement
+    authStore.clearSession()
     showLogoutModal.value = false
+    isLoggingOut.value = false
+    router.push('/Connexion')
   }
 }
 

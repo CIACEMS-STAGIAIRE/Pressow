@@ -1,944 +1,1178 @@
 <template>
   <DashboardLayout>
-    <div class="dashboard-layout">
-    <div class="wallet-dashboard">
-      <!-- En-tête du portefeuille -->
-      <div class="wallet-header">
-        <div class="header-content">
-          <h1 class="page-title">
-            <i class="fas fa-wallet title-icon"></i>
-            Mon Portefeuille
-          </h1>
-          <p class="page-subtitle">Gérez vos finances et effectuez des retraits</p>
+    <div class="wallet-page">
+      <!-- Header -->
+      <header class="page-header">
+        <div class="header-info">
+          <h1>Portefeuille</h1>
+          <p>Gérez vos gains et effectuez des retraits</p>
         </div>
-      </div>
+      </header>
 
-      <!-- Alertes et notifications -->
-      <div v-if="showPendingAlert" class="alert-section">
-        <div class="alert alert-warning">
-          <i class="fas fa-clock alert-icon"></i>
-          <div class="alert-content">
-            <h4 class="alert-title">Retrait en attente</h4>
-            <p class="alert-message">Votre retrait de {{ formatCurrency(pendingWithdrawalAmount) }} FCFA est en cours de traitement</p>
-          </div>
-          <button class="alert-close" @click="dismissAlert">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Solde principal -->
-      <div class="balance-section">
+      <!-- Cartes de solde -->
+      <section class="balance-section">
         <div class="balance-grid">
-          <div class="main-balance-card card">
-            <div class="card-content">
-              <div class="balance-content">
-                <div class="balance-info">
-                  <div class="balance-label">Solde Disponible</div>
-                  <div class="balance-amount">{{ formatCurrency(walletBalance) }} FCFA</div>
-                  <div class="balance-trend">
-                    <i class="fas fa-arrow-up trend-positive"></i>
-                    <span>Solde à jour</span>
-                  </div>
-                </div>
-                <div class="balance-icon">
-                  <i class="fas fa-coins"></i>
-                </div>
-              </div>
+          <!-- Solde disponible -->
+          <div class="balance-card main">
+            <div class="balance-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2"/>
+                <path d="M22 10H18C16.9 10 16 10.9 16 12C16 13.1 16.9 14 18 14H22"/>
+              </svg>
+            </div>
+            <div class="balance-content">
+              <span class="balance-label">Solde disponible</span>
+              <span class="balance-amount">{{ formatCurrency(balance) }}</span>
+            </div>
+            <button 
+              class="withdraw-btn" 
+              @click="openWithdrawModal"
+              :disabled="!canRequestPayout"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <polyline points="19 12 12 19 5 12"/>
+              </svg>
+              Retirer
+            </button>
+          </div>
+
+          <!-- Solde en attente -->
+          <div class="balance-card pending">
+            <div class="balance-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <div class="balance-content">
+              <span class="balance-label">En attente de virement</span>
+              <span class="balance-amount small">{{ formatCurrency(pendingBalance) }}</span>
+            </div>
+          </div>
+
+          <!-- Total gagné -->
+          <div class="balance-card total">
+            <div class="balance-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                <polyline points="17 6 23 6 23 12"/>
+              </svg>
+            </div>
+            <div class="balance-content">
+              <span class="balance-label">Total gagné</span>
+              <span class="balance-amount small">{{ formatCurrency(totalEarned) }}</span>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Actions rapides -->
-      <div class="quick-actions-section">
-        <h2 class="section-title">
-          <i class="fas fa-bolt section-icon"></i>
-          Actions Rapides
-        </h2>
-        <div class="actions-grid">
-          <div class="action-card card" @click="openWithdrawalModal">
-            <div class="card-content">
-              <div class="action-content">
-                <div class="action-icon withdraw">
-                  <i class="fas fa-money-bill-wave"></i>
-                </div>
-                <div class="action-info">
-                  <h3 class="action-title">Retrait</h3>
-                  <p class="action-description">Transférer de l'argent vers votre compte</p>
-                </div>
-                <div class="action-badge" v-if="hasPendingWithdrawals">
-                  <i class="fas fa-clock"></i>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="action-card card" @click="showTransactionHistory">
-            <div class="card-content">
-              <div class="action-content">
-                <div class="action-icon history">
-                  <i class="fas fa-history"></i>
-                </div>
-                <div class="action-info">
-                  <h3 class="action-title">Historique</h3>
-                  <p class="action-description">Voir toutes vos transactions</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="action-card card" @click="showBankAccounts">
-            <div class="card-content">
-              <div class="action-content">
-                <div class="action-icon bank">
-                  <i class="fas fa-university"></i>
-                </div>
-                <div class="action-info">
-                  <h3 class="action-title">Comptes Bancaires</h3>
-                  <p class="action-description">Gérer vos comptes liés</p>
-                </div>
-                <div class="action-badge" v-if="bankAccounts.length > 0">
-                  {{ bankAccounts.length }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="action-card card" @click="downloadStatement">
-            <div class="card-content">
-              <div class="action-content">
-                <div class="action-icon statement">
-                  <i class="fas fa-file-invoice-dollar"></i>
-                </div>
-                <div class="action-info">
-                  <h3 class="action-title">Relevé</h3>
-                  <p class="action-description">Télécharger votre relevé</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Statistiques financières -->
-      <div class="stats-section">
-        <h2 class="section-title">
-          <i class="fas fa-chart-bar section-icon"></i>
-          Aperçu Financier
-        </h2>
-        <div class="stats-grid">
-          <div v-for="(stat, index) in financialStats" :key="index" class="stat-card card">
-            <div class="card-content">
-              <div class="stat-content">
-                <div class="stat-icon-container">
-                  <div :class="['stat-icon', stat.bgColor]">
-                    <i :class="stat.icon"></i>
-                  </div>
-                </div>
-                <div class="stat-info">
-                  <p class="stat-label">{{ stat.title }}</p>
-                  <p class="stat-value">{{ stat.value }}</p>
-                  <div class="stat-trend" :class="stat.trendClass">
-                    <i :class="stat.trendIcon"></i>
-                    <span>{{ stat.trendValue }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Dernières transactions -->
-      <div class="transactions-section">
+      <!-- Compte Mobile Money -->
+      <section class="payout-account-section" v-if="payoutAccount">
         <div class="section-header">
-          <h2 class="section-title">
-            <i class="fas fa-exchange-alt section-icon"></i>
-            Dernières Transactions
-          </h2>
-          <button class="view-all-btn" @click="showTransactionHistory">
-            Voir tout
-            <i class="fas fa-chevron-right"></i>
-          </button>
+          <h2>Compte de retrait</h2>
         </div>
-        
-        <div class="transactions-card card">
-          <div class="card-content">
-            <div class="transactions-list">
-              <div 
-                v-for="transaction in recentTransactions" 
-                :key="transaction.id" 
-                class="transaction-item" 
-                :class="transaction.status"
-                @click="showTransactionDetails(transaction)"
-              >
-                <div class="transaction-icon">
-                  <i :class="transaction.icon"></i>
-                </div>
-                <div class="transaction-details">
-                  <p class="transaction-title">{{ transaction.title }}</p>
-                  <p class="transaction-date">{{ transaction.date }}</p>
-                  <div v-if="transaction.status === 'pending'" class="transaction-status">
-                    <i class="fas fa-clock"></i>
-                    En traitement
-                  </div>
-                </div>
-                <div class="transaction-amount" :class="transaction.type">
-                  {{ transaction.amount }}
-                </div>
-              </div>
-            </div>
-            
-            <div v-if="recentTransactions.length === 0" class="empty-state">
-              <i class="fas fa-receipt empty-icon"></i>
-              <p class="empty-text">Aucune transaction récente</p>
-              <button class="btn-primary" @click="openWithdrawalModal">
-                Effectuer un retrait
-              </button>
-            </div>
+        <div class="payout-account-card">
+          <div class="account-icon" :class="payoutAccount.operator">
+            <span>{{ getOperatorInitial(payoutAccount.operator) }}</span>
+          </div>
+          <div class="account-info">
+            <span class="account-name">{{ payoutAccount.account_name }}</span>
+            <span class="account-number">{{ payoutAccount.operator_display }} • {{ formatPhone(payoutAccount.phone_number) }}</span>
+          </div>
+          <span class="account-status" :class="payoutAccount.status">
+            {{ payoutAccount.status === 'verified' ? 'Vérifié' : 'En attente' }}
+          </span>
+        </div>
+      </section>
+
+      <!-- Historique des transactions -->
+      <section class="transactions-section">
+        <div class="section-header">
+          <h2>Transactions récentes</h2>
+          <div class="filter-tabs">
+            <button 
+              v-for="filter in transactionFilters" 
+              :key="filter.value"
+              :class="['filter-tab', { active: activeFilter === filter.value }]"
+              @click="activeFilter = filter.value"
+            >
+              {{ filter.label }}
+            </button>
           </div>
         </div>
-      </div>
 
-      <!-- Comptes bancaires liés -->
-      <div class="bank-accounts-section">
-        <div class="section-header">
-          <h2 class="section-title">
-            <i class="fas fa-university section-icon"></i>
-            Comptes Bancaires Liés
-          </h2>
-          <button class="view-all-btn" @click="showBankAccounts">
-            Gérer
-            <i class="fas fa-chevron-right"></i>
-          </button>
-        </div>
-        <div class="accounts-grid">
+        <div class="transactions-list" v-if="filteredTransactions.length > 0">
           <div 
-            v-for="account in bankAccounts" 
-            :key="account.id" 
-            class="account-card card"
-            :class="{ 'default-account': account.isDefault }"
+            v-for="tx in filteredTransactions" 
+            :key="tx.id" 
+            class="transaction-item"
           >
-            <div class="card-content">
-              <div class="account-content">
-                <div class="account-icon">
-                  <i :class="account.icon"></i>
-                </div>
-                <div class="account-info">
-                  <h3 class="account-bank">{{ account.bankName }}</h3>
-                  <p class="account-number">{{ account.accountNumber }}</p>
-                  <p class="account-type">{{ account.accountType }}</p>
-                  <div v-if="account.isDefault" class="default-badge">
-                    <i class="fas fa-star"></i>
-                    Compte par défaut
-                  </div>
-                </div>
-                <div class="account-status" :class="account.status">
-                  {{ account.status === 'active' ? 'Actif' : 'En attente' }}
-                </div>
-              </div>
+            <div class="tx-icon" :class="tx.direction">
+              <svg v-if="tx.direction === 'credit'" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5"/>
+                <polyline points="5 12 12 5 19 12"/>
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <polyline points="19 12 12 19 5 12"/>
+              </svg>
             </div>
-          </div>
-          
-          <div class="add-account-card card" @click="addBankAccount">
-            <div class="card-content">
-              <div class="add-account-content">
-                <i class="fas fa-plus add-icon"></i>
-                <p class="add-text">Ajouter un compte</p>
-              </div>
+            <div class="tx-info">
+              <span class="tx-type">{{ tx.type_display }}</span>
+              <span class="tx-desc">{{ tx.description || tx.order_numero || '-' }}</span>
+            </div>
+            <div class="tx-meta">
+              <span class="tx-amount" :class="tx.direction">
+                {{ tx.direction === 'credit' ? '+' : '-' }}{{ formatCurrency(tx.amount) }}
+              </span>
+              <span class="tx-date">{{ formatDate(tx.created) }}</span>
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Modal de retrait -->
-    <div v-if="showWithdrawalModal" class="modal-overlay" @click="closeWithdrawalModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3 class="modal-title">Effectuer un Retrait</h3>
-          <button class="modal-close" @click="closeWithdrawalModal">
-            <i class="fas fa-times"></i>
-          </button>
+        <div class="empty-state" v-else>
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2"/>
+            <line x1="2" y1="10" x2="22" y2="10"/>
+          </svg>
+          <p>Aucune transaction</p>
+          <span>Vos transactions apparaîtront ici</span>
         </div>
-        
-        <div class="modal-body">
-          <!-- Étapes du retrait -->
-          <div class="withdrawal-steps">
-            <div class="step" :class="{ active: currentStep === 1, completed: currentStep > 1 }">
-              <div class="step-number">1</div>
-              <span class="step-label">Montant</span>
-            </div>
-            <div class="step" :class="{ active: currentStep === 2, completed: currentStep > 2 }">
-              <div class="step-number">2</div>
-              <span class="step-label">Compte</span>
-            </div>
-            <div class="step" :class="{ active: currentStep === 3 }">
-              <div class="step-number">3</div>
-              <span class="step-label">Confirmation</span>
-            </div>
+
+        <button 
+          v-if="hasMoreTransactions" 
+          class="load-more-btn"
+          @click="loadMoreTransactions"
+          :disabled="isLoading"
+        >
+          {{ isLoading ? 'Chargement...' : 'Voir plus' }}
+        </button>
+      </section>
+
+      <!-- Modal de retrait -->
+      <div v-if="showWithdrawModal" class="modal-overlay" @click.self="closeWithdrawModal">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>Demander un retrait</h3>
+            <button class="modal-close" @click="closeWithdrawModal">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
           </div>
 
-          <!-- Étape 1: Montant -->
-          <div v-if="currentStep === 1" class="step-content">
+          <div class="modal-body">
+            <div class="withdraw-info">
+              <div class="info-row">
+                <span class="info-label">Solde disponible</span>
+                <span class="info-value">{{ formatCurrency(balance) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Frais de transfert</span>
+                <span class="info-value">6 FCFA</span>
+              </div>
+            </div>
+
             <div class="form-group">
-              <label class="form-label">Montant du retrait</label>
-              <div class="amount-input-container">
+              <label>Montant à retirer</label>
+              <div class="amount-input-wrapper">
                 <input 
-                  v-model="withdrawalAmount" 
                   type="number" 
-                  class="amount-input"
+                  v-model.number="withdrawAmount"
+                  :max="balance"
+                  min="500"
                   placeholder="0"
-                  :max="walletBalance"
-                  @input="validateAmount"
-                >
-                <span class="currency-suffix">FCFA</span>
+                  class="amount-input"
+                />
+                <span class="currency">FCFA</span>
               </div>
-              <p class="available-balance">
-                Solde disponible: {{ formatCurrency(walletBalance) }} FCFA
-              </p>
-              
-              <!-- Montants rapides -->
-              <div class="quick-amounts">
+              <div class="amount-presets">
                 <button 
-                  v-for="amount in quickAmounts" 
-                  :key="amount"
-                  class="quick-amount-btn"
-                  :class="{ active: withdrawalAmount === amount.toString() }"
-                  @click="setQuickAmount(amount)"
+                  v-for="preset in amountPresets" 
+                  :key="preset"
+                  @click="withdrawAmount = Math.min(preset, balance)"
+                  :disabled="preset > balance"
+                  class="preset-btn"
                 >
-                  {{ formatCurrency(amount) }} FCFA
+                  {{ formatShortCurrency(preset) }}
+                </button>
+                <button @click="withdrawAmount = balance" class="preset-btn all">
+                  Tout
                 </button>
               </div>
             </div>
-            
-            <!-- Résumé des frais -->
-            <div class="fee-summary">
-              <div class="fee-item">
-                <span><i class="fas fa-money-bill"></i> Montant du retrait:</span>
-                <span>{{ formatCurrency(parseInt(withdrawalAmount) || 0) }} FCFA</span>
+
+            <div class="withdraw-summary" v-if="withdrawAmount >= 500">
+              <div class="summary-row">
+                <span>Montant demandé</span>
+                <span>{{ formatCurrency(withdrawAmount) }}</span>
               </div>
-              <div class="fee-item">
-                <span><i class="fas fa-percentage"></i> Frais de transaction:</span>
-                <span>{{ formatCurrency(transactionFee) }} FCFA</span>
+              <div class="summary-row">
+                <span>Frais</span>
+                <span>- 6 FCFA</span>
               </div>
-              <div class="fee-item total">
-                <span><i class="fas fa-calculator"></i> Total débité:</span>
-                <span>{{ formatCurrency(totalDebit) }} FCFA</span>
+              <div class="summary-row total">
+                <span>Vous recevrez</span>
+                <span>{{ formatCurrency(withdrawAmount - 6) }}</span>
+              </div>
+            </div>
+
+            <div class="destination-info" v-if="payoutAccount">
+              <span class="dest-label">Vers</span>
+              <div class="dest-account">
+                <span class="dest-operator">{{ payoutAccount.operator_display }}</span>
+                <span class="dest-number">{{ payoutAccount.phone_number }}</span>
               </div>
             </div>
           </div>
 
-          <!-- Étape 2: Compte bancaire -->
-          <div v-if="currentStep === 2" class="step-content">
-            <div class="form-group">
-              <label class="form-label">Compte de destination</label>
-              <div class="accounts-list">
-                <div 
-                  v-for="account in bankAccounts" 
-                  :key="account.id"
-                  class="account-option"
-                  :class="{ selected: selectedAccount === account.id.toString() }"
-                  @click="selectedAccount = account.id.toString()"
-                >
-                  <div class="account-option-icon">
-                    <i :class="account.icon"></i>
-                  </div>
-                  <div class="account-option-info">
-                    <h4>{{ account.bankName }}</h4>
-                    <p>{{ account.accountNumber }} • {{ account.accountType }}</p>
-                  </div>
-                  <div class="account-option-check">
-                    <i class="fas fa-check" v-if="selectedAccount === account.id.toString()"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="add-account-prompt">
-              <p><i class="fas fa-info-circle"></i> Vous ne trouvez pas votre compte ?</p>
-              <button class="btn-text" @click="addBankAccount">
-                <i class="fas fa-plus"></i>
-                Ajouter un nouveau compte
-              </button>
-            </div>
+          <div class="modal-footer">
+            <button class="btn-cancel" @click="closeWithdrawModal">Annuler</button>
+            <button 
+              class="btn-confirm" 
+              @click="submitWithdraw"
+              :disabled="!canSubmitWithdraw || isSubmitting"
+            >
+              {{ isSubmitting ? 'Envoi...' : 'Confirmer le retrait' }}
+            </button>
           </div>
-
-          <!-- Étape 3: Confirmation -->
-          <div v-if="currentStep === 3" class="step-content">
-            <div class="confirmation-content">
-              <div class="confirmation-icon">
-                <i class="fas fa-shield-check"></i>
-              </div>
-              <h4 class="confirmation-title">Confirmer le retrait</h4>
-              
-              <div class="confirmation-details">
-                <div class="detail-item">
-                  <span><i class="fas fa-money-bill-wave"></i> Montant:</span>
-                  <strong>{{ formatCurrency(parseInt(withdrawalAmount)) }} FCFA</strong>
-                </div>
-                <div class="detail-item">
-                  <span><i class="fas fa-university"></i> Compte destination:</span>
-                  <span>{{ getSelectedAccount()?.bankName }} - {{ getSelectedAccount()?.accountNumber }}</span>
-                </div>
-                <div class="detail-item">
-                  <span><i class="fas fa-percentage"></i> Frais:</span>
-                  <span>{{ formatCurrency(transactionFee) }} FCFA</span>
-                </div>
-                <div class="detail-item total">
-                  <span><i class="fas fa-calculator"></i> Total:</span>
-                  <strong>{{ formatCurrency(totalDebit) }} FCFA</strong>
-                </div>
-                <div class="detail-item">
-                  <span><i class="fas fa-clock"></i> Date de traitement:</span>
-                  <span>{{ processingDate }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="modal-footer">
-          <button 
-            v-if="currentStep > 1"
-            class="btn-secondary" 
-            @click="previousStep"
-          >
-            <i class="fas fa-arrow-left"></i>
-            Retour
-          </button>
-          
-          <button 
-            v-if="currentStep < 3"
-            class="btn-primary" 
-            :disabled="!canProceedToNextStep"
-            @click="nextStep"
-          >
-            Continuer
-            <i class="fas fa-arrow-right"></i>
-          </button>
-          
-          <button 
-            v-if="currentStep === 3"
-            class="btn-primary" 
-            :disabled="!canWithdraw"
-            @click="processWithdrawal"
-          >
-            <i class="fas fa-check"></i>
-            Confirmer le retrait
-          </button>
         </div>
       </div>
-    </div>
 
-    <!-- Modal de confirmation de retrait -->
-    <div v-if="showSuccessModal" class="modal-overlay" @click="closeSuccessModal">
-      <div class="modal-content success-modal" @click.stop>
-        <div class="success-content">
+      <!-- Modal de succès -->
+      <div v-if="showSuccessModal" class="modal-overlay" @click.self="closeSuccessModal">
+        <div class="modal success-modal">
           <div class="success-icon">
-            <i class="fas fa-check-circle"></i>
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
           </div>
-          <h3 class="success-title">Retrait effectué avec succès !</h3>
-          <p class="success-message">
-            Votre retrait de <strong>{{ formatCurrency(parseInt(withdrawalAmount)) }} FCFA</strong> 
-            a été initié avec succès. L'argent sera viré sur votre compte 
-            <strong>{{ getSelectedAccount()?.bankName }}</strong> dans les 24 heures.
-          </p>
-          
-          <div class="success-details">
-            <div class="success-detail">
-              <span><i class="fas fa-hashtag"></i> Référence:</span>
-              <span>{{ withdrawalReference }}</span>
-            </div>
-            <div class="success-detail">
-              <span><i class="fas fa-calendar"></i> Date d'opération:</span>
-              <span>{{ new Date().toLocaleDateString('fr-FR') }}</span>
-            </div>
-          </div>
-          
-          <div class="success-actions">
-            <button class="btn-secondary" @click="downloadReceipt">
-              <i class="fas fa-download"></i>
-              Télécharger le reçu
-            </button>
-            <button class="btn-primary" @click="closeSuccessModal">
-              Terminer
-            </button>
-          </div>
+          <h3>Retrait demandé !</h3>
+          <p>Votre demande de retrait de <strong>{{ formatCurrency(lastWithdrawAmount) }}</strong> a été enregistrée.</p>
+          <p class="success-note">Le virement sera effectué sous 2 heures maximum.</p>
+          <button class="btn-confirm" @click="closeSuccessModal">OK</button>
         </div>
       </div>
-    </div>
 
-    <!-- Modal pour ajouter un compte -->
-    <div v-if="showAddAccountModal" class="modal-overlay" @click="showAddAccountModal = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3 class="modal-title">Ajouter un compte</h3>
-          <button class="modal-close" @click="showAddAccountModal = false">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label">Type de compte</label>
-            <select v-model="newAccount.type" class="form-select">
-              <option value="mobile_money">Mobile Money</option>
-              <option value="bank_account">Compte Bancaire</option>
-            </select>
-          </div>
-
-          <div v-if="newAccount.type === 'mobile_money'" class="form-group">
-            <label class="form-label">Fournisseur</label>
-            <select v-model="newAccount.provider" class="form-select">
-              <option v-for="provider in mobileProviders" :key="provider" :value="provider">
-                {{ provider }}
-              </option>
-            </select>
-            <label class="form-label">Nom / Numéro</label>
-            <input 
-              v-model="newAccount.phone" 
-              class="form-input"
-              placeholder="Nom & Numéro (ex: Jean - +225xxxxxxxx)" 
-            />
-          </div>
-
-          <div v-else class="form-group">
-            <label class="form-label">Nom de la banque</label>
-            <input 
-              v-model="newAccount.bankName" 
-              class="form-input"
-              placeholder="Ex: BICEC" 
-            />
-            <label class="form-label">Numéro de compte</label>
-            <input 
-              v-model="newAccount.accountNumber" 
-              class="form-input"
-              placeholder="000123456789" 
-            />
-            <label class="form-label">Nom du titulaire</label>
-            <input 
-              v-model="newAccount.accountHolder" 
-              class="form-input"
-              placeholder="Nom complet" 
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-secondary" @click="showAddAccountModal = false">
-            Annuler
-          </button>
-          <button class="btn-primary" @click="saveNewAccount">
-            Enregistrer
-          </button>
-        </div>
+      <!-- Loading overlay -->
+      <div v-if="isLoading && !transactions.length" class="loading-overlay">
+        <div class="spinner"></div>
       </div>
     </div>
-  </div>
   </DashboardLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import DashboardLayout from '@/Components/ComponentsCommun/DashboardLayout.vue'
+import { useWalletStore } from '@/stores/wallet'
+import type { TransactionType } from '@/stores/wallet'
 
-// Types
-interface BankAccount {
-  id: number
-  bankName: string
-  accountNumber: string
-  accountType: string
-  icon: string
-  status: 'active' | 'pending'
-  isDefault: boolean
-}
+const walletStore = useWalletStore()
 
-interface Transaction {
-  id: number
-  title: string
-  date: string
-  amount: string
-  type: 'withdrawal' | 'fee'
-  icon: string
-  status: 'completed' | 'pending' | 'failed'
-}
-
-interface FinancialStat {
-  title: string
-  value: string
-  icon: string
-  bgColor: string
-  trendValue: string
-  trendIcon: string
-  trendClass: string
-}
-
-interface NewAccount {
-  type: 'mobile_money' | 'bank_account'
-  provider: string
-  phone: string
-  bankName: string
-  accountNumber: string
-  accountHolder: string
-}
-
-// Données réactives
-const walletBalance = ref(1250000)
-const showWithdrawalModal = ref(false)
+// État local
+const showWithdrawModal = ref(false)
 const showSuccessModal = ref(false)
-const showPendingAlert = ref(true)
-const showAddAccountModal = ref(false)
-const currentStep = ref(1)
-const withdrawalAmount = ref('')
-const selectedAccount = ref('')
-const withdrawalReference = ref('')
-const pendingWithdrawalAmount = ref(300000)
+const withdrawAmount = ref(0)
+const isSubmitting = ref(false)
+const lastWithdrawAmount = ref(0)
+const activeFilter = ref<TransactionType | 'all'>('all')
 
-// Configuration
-const transactionFee = 500
-const quickAmounts = [50000, 100000, 200000, 500000]
-const mobileProviders = ['Orange CI', 'Moov CI', 'MTN CI', 'Wave CI']
+// Filtres de transactions
+const transactionFilters = [
+  { value: 'all', label: 'Tout' },
+  { value: 'order_payment', label: 'Revenus' },
+  { value: 'payout', label: 'Retraits' },
+] as const
 
-// Données des comptes bancaires
-const bankAccounts = ref<BankAccount[]>([
-  {
-    id: 1,
-    bankName: 'BICEC',
-    accountNumber: '***4587',
-    accountType: 'Compte Courant',
-    icon: 'fas fa-university',
-    status: 'active',
-    isDefault: true
-  },
-  {
-    id: 2,
-    bankName: 'UBA',
-    accountNumber: '***8921',
-    accountType: 'Compte Épargne',
-    icon: 'fas fa-piggy-bank',
-    status: 'active',
-    isDefault: false
-  },
-  {
-    id: 3,
-    bankName: 'SGBC',
-    accountNumber: '***6345',
-    accountType: 'Compte Courant',
-    icon: 'fas fa-university',
-    status: 'active',
-    isDefault: false
+// Presets de montants
+const amountPresets = [1000, 5000, 10000, 25000]
+
+// Computed
+const isLoading = computed(() => walletStore.isLoading)
+const balance = computed(() => walletStore.balance)
+const pendingBalance = computed(() => walletStore.pendingBalance)
+const totalEarned = computed(() => walletStore.totalEarned)
+const payoutAccount = computed(() => walletStore.payoutAccount)
+const canRequestPayout = computed(() => walletStore.canRequestPayout)
+const transactions = computed(() => walletStore.transactions)
+const hasMoreTransactions = computed(() => walletStore.transactionsPagination?.has_more ?? false)
+
+const filteredTransactions = computed(() => {
+  if (activeFilter.value === 'all') {
+    return transactions.value
   }
-])
-
-// Transactions récentes
-const recentTransactions = ref<Transaction[]>([
-  {
-    id: 1,
-    title: 'Retrait vers BICEC',
-    date: '15 Nov 2023, 14:30',
-    amount: '-150,000 FCFA',
-    type: 'withdrawal',
-    icon: 'fas fa-arrow-up',
-    status: 'completed'
-  },
-  {
-    id: 2,
-    title: 'Retrait vers UBA',
-    date: '12 Nov 2023, 09:15',
-    amount: '-300,000 FCFA',
-    type: 'withdrawal',
-    icon: 'fas fa-arrow-up',
-    status: 'pending'
-  },
-  {
-    id: 3,
-    title: 'Commission de service',
-    date: '10 Nov 2023, 16:45',
-    amount: '-2,500 FCFA',
-    type: 'fee',
-    icon: 'fas fa-percentage',
-    status: 'completed'
-  },
-  {
-    id: 4,
-    title: 'Retrait vers SGBC',
-    date: '05 Nov 2023, 11:20',
-    amount: '-200,000 FCFA',
-    type: 'withdrawal',
-    icon: 'fas fa-arrow-up',
-    status: 'completed'
-  }
-])
-
-// Nouveau compte
-const newAccount = ref<NewAccount>({
-  type: 'mobile_money',
-  provider: mobileProviders[0] ?? '',
-  phone: '',
-  bankName: '',
-  accountNumber: '',
-  accountHolder: '',
+  return transactions.value.filter(tx => tx.type === activeFilter.value)
 })
 
-// Computed properties
-const totalDebit = computed(() => {
-  const amount = parseInt(withdrawalAmount.value) || 0
-  return amount + transactionFee
+const canSubmitWithdraw = computed(() => {
+  return withdrawAmount.value >= 500 && withdrawAmount.value <= balance.value
 })
-
-const canWithdraw = computed(() => {
-  const amount = parseInt(withdrawalAmount.value) || 0
-  return amount > 0 && 
-         amount <= walletBalance.value && 
-         selectedAccount.value !== '' &&
-         totalDebit.value <= walletBalance.value
-})
-
-const canProceedToNextStep = computed(() => {
-  switch (currentStep.value) {
-    case 1:
-      const amount = parseInt(withdrawalAmount.value) || 0
-      return amount > 0 && amount <= walletBalance.value
-    case 2:
-      return selectedAccount.value !== ''
-    default:
-      return true
-  }
-})
-
-const hasPendingWithdrawals = computed(() => {
-  return recentTransactions.value.some(t => t.status === 'pending')
-})
-
-const processingDate = computed(() => {
-  const date = new Date()
-  date.setDate(date.getDate() + 1)
-  return date.toLocaleDateString('fr-FR', { 
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  })
-})
-
-const financialStats = computed<FinancialStat[]>(() => [
-  {
-    title: 'Revenu Total du Mois',
-    value: `${formatCurrency(1750000)} FCFA`,
-    icon: 'fas fa-coins',
-    bgColor: 'bg-blue-light',
-    trendValue: '+12%',
-    trendIcon: 'fas fa-arrow-up',
-    trendClass: 'trend-positive'
-  },
-  {
-    title: 'Transactions ce Mois',
-    value: recentTransactions.value.length.toString(),
-    icon: 'fas fa-exchange-alt',
-    bgColor: 'bg-green-light',
-    trendValue: `${recentTransactions.value.length} opérations`,
-    trendIcon: 'fas fa-chart-line',
-    trendClass: 'trend-neutral'
-  }
-])
 
 // Méthodes
-const formatCurrency = (amount: number) => {
-  return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'decimal',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount) + ' FCFA'
 }
 
-const openWithdrawalModal = () => {
-  showWithdrawalModal.value = true
-  currentStep.value = 1
-  withdrawalAmount.value = ''
-  selectedAccount.value = ''
-}
-
-const closeWithdrawalModal = () => {
-  showWithdrawalModal.value = false
-  currentStep.value = 1
-}
-
-const nextStep = () => {
-  if (currentStep.value < 3 && canProceedToNextStep.value) {
-    currentStep.value++
+function formatShortCurrency(amount: number): string {
+  if (amount >= 1000) {
+    return (amount / 1000) + 'k'
   }
+  return amount.toString()
 }
 
-const previousStep = () => {
-  if (currentStep.value > 1) {
-    currentStep.value--
-  }
-}
-
-const setQuickAmount = (amount: number) => {
-  withdrawalAmount.value = amount.toString()
-}
-
-const validateAmount = () => {
-  const amount = parseInt(withdrawalAmount.value) || 0
-  if (amount > walletBalance.value) {
-    withdrawalAmount.value = walletBalance.value.toString()
-  }
-}
-
-const getSelectedAccount = () => {
-  return bankAccounts.value.find(acc => acc.id === parseInt(selectedAccount.value))
-}
-
-const processWithdrawal = () => {
-  if (!canWithdraw.value) return
-  
-  // Générer une référence
-  withdrawalReference.value = 'WT' + Date.now().toString().slice(-8)
-  
-  // Mettre à jour le solde
-  const amount = parseInt(withdrawalAmount.value)
-  walletBalance.value -= totalDebit.value
-  
-  // Ajouter à l'historique des transactions
-  recentTransactions.value.unshift({
-    id: Date.now(),
-    title: `Retrait vers ${getSelectedAccount()?.bankName}`,
-    date: new Date().toLocaleDateString('fr-FR', { 
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }),
-    amount: `-${formatCurrency(amount)} FCFA`,
-    type: 'withdrawal',
-    icon: 'fas fa-arrow-up',
-    status: 'pending'
+function formatDate(dateString: string): string {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
   })
-  
-  // Fermer le modal de retrait et ouvrir le modal de succès
-  showWithdrawalModal.value = false
-  showSuccessModal.value = true
 }
 
-const closeSuccessModal = () => {
+function formatPhone(phone: string): string {
+  // Format +225XXXXXXXXXX to XX XX XX XX XX
+  const digits = phone.replace(/\D/g, '')
+  const local = digits.slice(-10)
+  return local.replace(/(\d{2})(?=\d)/g, '$1 ')
+}
+
+function getOperatorInitial(operator: string): string {
+  const initials: Record<string, string> = {
+    orange: 'OM',
+    mtn: 'MM',
+    moov: 'MV',
+    wave: 'W'
+  }
+  return initials[operator] || operator.charAt(0).toUpperCase()
+}
+
+function openWithdrawModal(): void {
+  withdrawAmount.value = 0
+  showWithdrawModal.value = true
+}
+
+function closeWithdrawModal(): void {
+  showWithdrawModal.value = false
+  withdrawAmount.value = 0
+}
+
+async function submitWithdraw(): Promise<void> {
+  if (!canSubmitWithdraw.value || isSubmitting.value) return
+  
+  isSubmitting.value = true
+  try {
+    await walletStore.requestPayout(withdrawAmount.value)
+    lastWithdrawAmount.value = withdrawAmount.value
+    closeWithdrawModal()
+    showSuccessModal.value = true
+  } catch (error: any) {
+    alert(error.message || 'Erreur lors de la demande de retrait')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+function closeSuccessModal(): void {
   showSuccessModal.value = false
-  withdrawalAmount.value = ''
-  selectedAccount.value = ''
-  currentStep.value = 1
+  lastWithdrawAmount.value = 0
 }
 
-const downloadReceipt = () => {
-  const receiptContent = `
-    Reçu de Retrait
-    ================
-    Référence: ${withdrawalReference.value}
-    Montant: ${formatCurrency(parseInt(withdrawalAmount.value))} FCFA
-    Frais: ${formatCurrency(transactionFee)} FCFA
-    Total: ${formatCurrency(totalDebit.value)} FCFA
-    Compte: ${getSelectedAccount()?.bankName} - ${getSelectedAccount()?.accountNumber}
-    Date: ${new Date().toLocaleDateString('fr-FR')}
-  `
-  
-  const blob = new Blob([receiptContent], { type: 'text/plain' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `recu-retrait-${withdrawalReference.value}.txt`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+async function loadMoreTransactions(): Promise<void> {
+  await walletStore.loadMoreTransactions()
 }
 
-const showTransactionHistory = () => {
-  window.open('/historique-transactions', '_blank')
-}
-
-const showBankAccounts = () => {
-  window.open('/gestion-comptes', '_blank')
-}
-
-const addBankAccount = () => {
-  showAddAccountModal.value = true
-}
-
-const saveNewAccount = () => {
-  if (newAccount.value.type === 'mobile_money') {
-    if (!newAccount.value.phone.trim()) {
-      alert('Veuillez saisir le numéro de téléphone')
-      return
-    }
-    
-    bankAccounts.value.push({
-      id: Date.now(),
-      bankName: newAccount.value.provider,
-      accountNumber: newAccount.value.phone,
-      accountType: 'Mobile Money',
-      icon: 'fas fa-mobile-alt',
-      status: 'pending',
-      isDefault: false,
-    })
-  } else {
-    if (!newAccount.value.bankName.trim() || !newAccount.value.accountNumber.trim()) {
-      alert('Veuillez remplir tous les champs obligatoires')
-      return
-    }
-    
-    bankAccounts.value.push({
-      id: Date.now(),
-      bankName: newAccount.value.bankName,
-      accountNumber: newAccount.value.accountNumber,
-      accountType: 'Compte Bancaire',
-      icon: 'fas fa-university',
-      status: 'pending',
-      isDefault: false,
-    })
+// Charger les données au montage
+onMounted(async () => {
+  try {
+    await walletStore.loadAll()
+  } catch (error) {
+    console.error('Erreur lors du chargement du portefeuille:', error)
   }
-  
-  // Réinitialiser et fermer
-  newAccount.value = {
-    type: 'mobile_money',
-    provider: mobileProviders[0] ?? '',
-    phone: '',
-    bankName: '',
-    accountNumber: '',
-    accountHolder: '',
-  }
-  showAddAccountModal.value = false
-}
+})
 
-const showTransactionDetails = (transaction: Transaction) => {
-  alert(`Détails de la transaction:\n${transaction.title}\n${transaction.date}\n${transaction.amount}`)
-}
-
-const downloadStatement = () => {
-  const statementContent = `
-    Relevé de Compte
-    ================
-    Solde actuel: ${formatCurrency(walletBalance.value)} FCFA
-    Date: ${new Date().toLocaleDateString('fr-FR')}
-    
-    Dernières transactions:
-    ${recentTransactions.value.map(t => `- ${t.title}: ${t.amount} (${t.date})`).join('\n')}
-  `
-  
-  const blob = new Blob([statementContent], { type: 'text/plain' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `releve-compte-${new Date().toISOString().split('T')[0]}.txt`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-}
-
-const dismissAlert = () => {
-  showPendingAlert.value = false
-}
-
-// Cycle de vie
-onMounted(() => {
-  console.log('Composant Wallet monté')
+// Recharger les transactions quand le filtre change
+watch(activeFilter, async (newFilter) => {
+  const filterValue = newFilter === 'all' ? undefined : newFilter
+  await walletStore.fetchTransactions({ type: filterValue as TransactionType | undefined })
 })
 </script>
 
-<style scoped src="@/Assets/AssetsCommun/Portefeuille.css"></style>
+<style scoped>
+/* Variables - Charte graphique Pressow */
+:root {
+  --color-primary: #37A1EF;
+  --color-primary-dark: #2589d4;
+  --color-accent: #F9A13B;
+  --color-accent-dark: #e8922d;
+  --color-success: #10b981;
+  --color-danger: #ef4444;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+}
+
+/* Layout */
+.wallet-page {
+  min-height: 100%;
+  background: #f8fafc;
+  padding: 1.5rem;
+}
+
+/* Header */
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.page-header p {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0.25rem 0 0;
+}
+
+/* Balance Section */
+.balance-section {
+  margin-bottom: 1.5rem;
+}
+
+.balance-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .balance-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.balance-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.balance-card.main {
+  background: linear-gradient(135deg, #37A1EF 0%, #2589d4 100%);
+  color: white;
+}
+
+.balance-card.main .balance-icon {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.balance-card.main .balance-label {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.balance-card.main .balance-amount {
+  color: white;
+}
+
+.balance-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.balance-card.pending .balance-icon {
+  background: rgba(249, 161, 59, 0.12);
+  color: #F9A13B;
+}
+
+.balance-card.total .balance-icon {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.balance-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.balance-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.balance-amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.balance-amount.small {
+  font-size: 1.125rem;
+}
+
+.withdraw-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.withdraw-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.withdraw-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Payout Account Section */
+.payout-account-section {
+  margin-bottom: 1.5rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.section-header h2 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.payout-account-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.account-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: white;
+}
+
+.account-icon.orange { background: #ff6600; }
+.account-icon.mtn { background: #ffcc00; color: #333; }
+.account-icon.moov { background: #0066cc; }
+.account-icon.wave { background: #1dc9ff; }
+
+.account-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.account-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.account-number {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.account-status {
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.account-status.verified {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.account-status.pending {
+  background: rgba(249, 161, 59, 0.1);
+  color: #d97706;
+}
+
+/* Transactions Section */
+.transactions-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 0.25rem;
+  background: #f1f5f9;
+  padding: 0.25rem;
+  border-radius: 6px;
+}
+
+.filter-tab {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.filter-tab:hover {
+  color: #1e293b;
+}
+
+.filter-tab.active {
+  background: white;
+  color: #37A1EF;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.transactions-list {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.transaction-item {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.transaction-item:last-child {
+  border-bottom: none;
+}
+
+.tx-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tx-icon.credit {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.tx-icon.debit {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.tx-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.tx-type {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.tx-desc {
+  font-size: 0.75rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tx-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.125rem;
+}
+
+.tx-amount {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.tx-amount.credit {
+  color: #10b981;
+}
+
+.tx-amount.debit {
+  color: #ef4444;
+}
+
+.tx-date {
+  font-size: 0.625rem;
+  color: #94a3b8;
+}
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.empty-state svg {
+  margin-bottom: 1rem;
+  opacity: 0.4;
+}
+
+.empty-state p {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0;
+}
+
+.empty-state span {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+}
+
+.load-more-btn {
+  width: 100%;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.load-more-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #37A1EF;
+}
+
+.load-more-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.25rem 0;
+}
+
+.modal-header h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.modal-close:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.modal-body {
+  padding: 1.25rem;
+}
+
+.withdraw-info {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+}
+
+.info-label {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.info-value {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+
+.amount-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0 0.875rem;
+  transition: border-color 0.15s;
+}
+
+.amount-input-wrapper:focus-within {
+  border-color: #37A1EF;
+}
+
+.amount-input {
+  flex: 1;
+  padding: 0.75rem 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1e293b;
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.amount-input::placeholder {
+  color: #94a3b8;
+}
+
+.currency {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.amount-presets {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.preset-btn {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.preset-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.preset-btn.all {
+  background: rgba(55, 161, 239, 0.1);
+  color: #37A1EF;
+}
+
+.preset-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.withdraw-summary {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.375rem 0;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.summary-row.total {
+  border-top: 1px solid #e2e8f0;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.destination-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(55, 161, 239, 0.05);
+  border: 1px solid rgba(55, 161, 239, 0.15);
+  border-radius: 8px;
+}
+
+.dest-label {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.dest-account {
+  display: flex;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0 1.25rem 1.25rem;
+}
+
+.btn-cancel, .btn-confirm {
+  flex: 1;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-cancel {
+  background: #f1f5f9;
+  color: #64748b;
+  border: none;
+}
+
+.btn-cancel:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.btn-confirm {
+  background: #37A1EF;
+  color: white;
+  border: none;
+}
+
+.btn-confirm:hover:not(:disabled) {
+  background: #2589d4;
+}
+
+.btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Success modal */
+.success-modal {
+  text-align: center;
+  padding: 2rem;
+}
+
+.success-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #10b981;
+}
+
+.success-modal h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 0.5rem;
+}
+
+.success-modal p {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0 0 0.5rem;
+}
+
+.success-note {
+  font-size: 0.75rem !important;
+  color: #94a3b8 !important;
+}
+
+.success-modal .btn-confirm {
+  margin-top: 1rem;
+  width: auto;
+  padding: 0.75rem 2rem;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #37A1EF;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .wallet-page {
+    padding: 1rem;
+  }
+
+  .balance-amount {
+    font-size: 1.25rem;
+  }
+
+  .withdraw-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .filter-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal {
+    max-height: 85vh;
+  }
+}
+</style>

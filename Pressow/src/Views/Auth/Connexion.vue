@@ -147,10 +147,12 @@ const removeNotification = (notification: Notification): void => {
 }
 
 const getRedirectPath = (user: AuthUser): string => {
-  if (user.provider) {
+  // Prestataires (provider_owner, provider_manager)
+  if (user.provider || user.role === 'provider_owner' || user.role === 'provider_manager') {
     return '/Dashboard'
   }
-  return '/'
+  // Clients → dashboard client
+  return '/client'
 }
 
 const handleSubmit = async (form$: any): Promise<void> => {
