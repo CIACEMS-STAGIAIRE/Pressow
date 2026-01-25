@@ -17,6 +17,7 @@
   "dependencies": {
     "@vueform/vueform": "^1.13.7",
     "axios": "^1.13.2",
+    "firebase": "^12.8.0",
     "leaflet": "^1.9.4",
     "pinia": "^3.0.3",
     "vue": "^3.5.22",

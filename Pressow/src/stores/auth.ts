@@ -210,7 +210,7 @@ export const useAuthStore = defineStore('auth', {
       }
       this.ensureInterceptors()
       
-      const timeoutMs = 2000
+      const timeoutMs = 5000 // Augmenté à 5 secondes pour laisser le temps au refresh + fetchProfile
       let timeoutId: ReturnType<typeof setTimeout> | undefined
       const timeoutPromise = new Promise<void>((resolve) => {
         timeoutId = setTimeout(resolve, timeoutMs)
@@ -218,14 +218,21 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         await Promise.race([
-          this.refreshAccessToken()
-            .then(() => {
+          (async () => {
+            try {
+              // 1. Rafraîchir le token
+              await this.refreshAccessToken()
+              console.log('[Auth] Token rafraîchi, chargement du profil...')
+              
+              // 2. IMPORTANT: Charger le profil utilisateur après le refresh
+              await this.fetchProfile()
               console.log('[Auth] Session restaurée avec succès')
-            })
-            .catch(() => {
-              // Si le refresh échoue (401, etc.), nettoyer la session silencieusement
+            } catch (error) {
+              // Si le refresh ou fetchProfile échoue, nettoyer la session silencieusement
+              console.warn('[Auth] Échec restauration session:', error)
               this.clearSession()
-            }),
+            }
+          })(),
           timeoutPromise,
         ])
       } finally {

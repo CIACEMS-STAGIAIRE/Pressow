@@ -151,9 +151,19 @@
               </span>
             </div>
 
+            <!-- Message d'erreur si service non configuré -->
+            <div v-if="serviceConfigError" class="service-error">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>{{ serviceConfigError }}</span>
+            </div>
+
             <!-- Sélection type d'article (si disponible) -->
             <div v-if="serviceDetails?.article_types?.length > 0" class="selection-group">
-              <label>Type d'article</label>
+              <label>Type d'article <span class="required">*</span></label>
               <div class="options-grid">
                 <button
                   v-for="type in serviceDetails.article_types"
@@ -344,12 +354,31 @@ const canAddToCart = computed(() => {
   if (!selectedService.value) return false
   if (isLoadingDetails.value) return false
   
-  // Si des types d'articles sont disponibles, un doit être sélectionné
-  if (serviceDetails.value?.article_types?.length > 0 && !selectedArticleType.value) {
-    return false
+  // Un type d'article DOIT être sélectionné (sauf mode forfait)
+  // Car le backend exige article_type_id pour calculer le prix
+  if (selectedService.value.service.mode_tarif !== 'forfait') {
+    // Si pas de types d'articles disponibles = tarifs non configurés
+    if (!serviceDetails.value?.article_types?.length) {
+      return false
+    }
+    // Un type d'article doit être sélectionné
+    if (!selectedArticleType.value) {
+      return false
+    }
   }
   
   return true
+})
+
+// Message d'erreur si service non configuré
+const serviceConfigError = computed(() => {
+  if (!serviceDetails.value) return null
+  if (selectedService.value?.service.mode_tarif === 'forfait') return null
+  
+  if (!serviceDetails.value.article_types?.length) {
+    return 'Ce service n\'a pas encore de tarifs configurés par le prestataire.'
+  }
+  return null
 })
 
 // Methods
@@ -917,6 +946,30 @@ watch(() => route.params.id, () => {
   border-radius: 8px;
 }
 
+/* Message d'erreur service non configuré */
+.service-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.service-error svg {
+  color: #ef4444;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.service-error span {
+  font-size: 0.875rem;
+  color: #b91c1c;
+  line-height: 1.4;
+}
+
 .selection-group {
   margin-bottom: 20px;
 }
@@ -927,6 +980,10 @@ watch(() => route.params.id, () => {
   font-weight: 500;
   color: #374151;
   margin-bottom: 10px;
+}
+
+.selection-group label .required {
+  color: #ef4444;
 }
 
 .options-grid {

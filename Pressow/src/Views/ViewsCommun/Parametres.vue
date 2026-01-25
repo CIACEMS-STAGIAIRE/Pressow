@@ -7,6 +7,12 @@
         <p class="page-description">Personnalisez votre expérience sur la plateforme</p>
       </div>
 
+      <!-- Loading -->
+      <div v-if="isLoading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+      </div>
+
+      <template v-else>
       <!-- Section Notifications -->
       <div class="settings-card">
         <div class="card-header">
@@ -38,13 +44,42 @@
           <!-- Canaux -->
           <div class="settings-section">
             <h4 class="section-title">Canaux de notification</h4>
-            <div v-for="channel in notificationChannels" :key="channel.key" class="setting-item">
-              <div class="setting-info">
-                <span class="setting-label">{{ channel.label }}</span>
-                <span class="setting-description">{{ channel.description }}</span>
+            
+            <!-- Email et SMS -->
+            <template v-for="channel in notificationChannels.filter(c => c.key !== 'push')" :key="channel.key">
+              <div class="setting-item">
+                <div class="setting-info">
+                  <span class="setting-label">{{ channel.label }}</span>
+                  <span class="setting-description">{{ channel.description }}</span>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" v-model="settings.notifications.channels[channel.key]" />
+                  <span class="toggle-slider"></span>
+                </label>
               </div>
-              <label class="toggle-switch">
-                <input type="checkbox" v-model="settings.notifications.channels[channel.key]" />
+            </template>
+            
+            <!-- Push (avec gestion spéciale des permissions) -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">Push</span>
+                <span class="setting-description">
+                  Notifications sur votre appareil
+                  <span v-if="pushPermissionState === 'denied'" class="permission-warning">
+                    (bloqué - modifiez les paramètres de votre navigateur)
+                  </span>
+                  <span v-else-if="pushPermissionState === 'granted'" class="permission-granted">
+                    (activé)
+                  </span>
+                </span>
+              </div>
+              <label class="toggle-switch" :class="{ disabled: pushPermissionState === 'denied' }">
+                <input 
+                  type="checkbox" 
+                  v-model="settings.notifications.channels.push"
+                  @change="onPushToggle"
+                  :disabled="pushPermissionState === 'denied'"
+                />
                 <span class="toggle-slider"></span>
               </label>
             </div>
@@ -241,6 +276,7 @@
           {{ isSaving ? 'Enregistrement...' : 'Enregistrer tous les paramètres' }}
         </button>
       </div>
+      </template>
 
       <!-- Toast -->
       <div v-if="toast.show" :class="['toast', `toast-${toast.type}`]">
@@ -253,6 +289,15 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import DashboardLayout from '@/Components/ComponentsCommun/DashboardLayout.vue'
+import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+import {
+  initializeNotifications,
+  disableNotifications,
+  getCurrentToken,
+  isNotificationSupported,
+  getNotificationPermissionState,
+} from '@/services/notifications'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -261,11 +306,44 @@ import DashboardLayout from '@/Components/ComponentsCommun/DashboardLayout.vue'
 type NotificationTypeKey = 'newOrders' | 'orderUpdates' | 'payments' | 'reminders'
 type NotificationChannelKey = 'email' | 'sms' | 'push'
 
+interface ProviderSettings {
+  // Notifications - Canaux
+  push_notifications: boolean
+  email_notifications: boolean
+  sms_notifications: boolean
+  notification_email: string
+  notification_phone: string
+  // Notifications - Types
+  notify_new_orders: boolean
+  notify_order_updates: boolean
+  notify_payments: boolean
+  notify_reminders: boolean
+  // Disponibilité
+  auto_accept_orders: boolean
+  pause_mode: boolean
+  pause_reason: string
+  max_orders_per_day: number
+  working_days: string[]
+  opening_hours: {
+    weekdays: { start: string; end: string }
+    weekends: { start: string; end: string }
+  }
+  // Financier
+  min_order_amount: number
+  delivery_fee: number
+  // Sécurité
+  two_factor_auth: boolean
+  login_alerts: boolean
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // ÉTATS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+const authStore = useAuthStore()
+const isLoading = ref(true)
 const isSaving = ref(false)
+const pushPermissionState = ref<string>('default')
 
 const toast = reactive({
   show: false,
@@ -283,14 +361,14 @@ const settings = reactive({
     } as Record<NotificationTypeKey, boolean>,
     channels: {
       email: true,
-      sms: true,
+      sms: false,
       push: true
     } as Record<NotificationChannelKey, boolean>
   },
   availability: {
     autoAccept: false,
     pauseMode: false,
-    maxOrdersPerDay: '10',
+    maxOrdersPerDay: '0',
     workingDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
     workHours: {
       weekdays: { start: '08:00', end: '18:00' },
@@ -360,32 +438,161 @@ const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   setTimeout(() => { toast.show = false }, 3000)
 }
 
+/**
+ * Charge les paramètres depuis le backend
+ */
+const loadSettings = async () => {
+  isLoading.value = true
+  
+  try {
+    // Vérifier l'état des permissions push
+    if (isNotificationSupported()) {
+      pushPermissionState.value = getNotificationPermissionState()
+    }
+    
+    // Charger les paramètres du prestataire depuis l'API
+    const response = await api.get<{ success: boolean; settings: ProviderSettings }>(
+      '/providers/settings/full/'
+    )
+    
+    if (response.data.success) {
+      const s = response.data.settings
+      
+      // Mapper les données du backend vers l'état local
+      settings.notifications.channels.push = s.push_notifications
+      settings.notifications.channels.email = s.email_notifications
+      settings.notifications.channels.sms = s.sms_notifications
+      
+      settings.notifications.types.newOrders = s.notify_new_orders
+      settings.notifications.types.orderUpdates = s.notify_order_updates
+      settings.notifications.types.payments = s.notify_payments
+      settings.notifications.types.reminders = s.notify_reminders
+      
+      settings.availability.autoAccept = s.auto_accept_orders
+      settings.availability.pauseMode = s.pause_mode
+      settings.availability.maxOrdersPerDay = s.max_orders_per_day === 0 ? 'unlimited' : String(s.max_orders_per_day)
+      settings.availability.workingDays = s.working_days || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+      
+      if (s.opening_hours && Object.keys(s.opening_hours).length > 0) {
+        settings.availability.workHours = s.opening_hours
+      }
+      
+      settings.security.twoFactorAuth = s.two_factor_auth
+      settings.security.loginAlerts = s.login_alerts
+      
+      settings.financial.minOrderAmount = Number(s.min_order_amount) || 500
+    }
+  } catch (error: any) {
+    console.error('Erreur chargement paramètres:', error)
+    // Ne pas afficher d'erreur si c'est juste que l'utilisateur n'est pas prestataire
+    if (error?.response?.status !== 403) {
+      showToast('Erreur lors du chargement des paramètres', 'error')
+    }
+  } finally {
+    isLoading.value = false
+  }
+}
+
+/**
+ * Sauvegarde les paramètres vers le backend
+ */
 const saveSettings = async () => {
   isSaving.value = true
   
   try {
-    // Simulation d'appel API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Préparer les données pour l'API
+    const payload = {
+      // Notifications - Canaux
+      push_notifications: settings.notifications.channels.push,
+      email_notifications: settings.notifications.channels.email,
+      sms_notifications: settings.notifications.channels.sms,
+      
+      // Notifications - Types
+      notify_new_orders: settings.notifications.types.newOrders,
+      notify_order_updates: settings.notifications.types.orderUpdates,
+      notify_payments: settings.notifications.types.payments,
+      notify_reminders: settings.notifications.types.reminders,
+      
+      // Disponibilité
+      auto_accept_orders: settings.availability.autoAccept,
+      pause_mode: settings.availability.pauseMode,
+      max_orders_per_day: settings.availability.maxOrdersPerDay === 'unlimited' ? 0 : parseInt(settings.availability.maxOrdersPerDay),
+      working_days: settings.availability.workingDays,
+      opening_hours: settings.availability.workHours,
+      
+      // Financier
+      min_order_amount: settings.financial.minOrderAmount,
+      
+      // Sécurité
+      two_factor_auth: settings.security.twoFactorAuth,
+      login_alerts: settings.security.loginAlerts,
+    }
     
-    // Sauvegarder en localStorage pour persistance locale
-    localStorage.setItem('presso_settings', JSON.stringify(settings))
+    // Appeler l'API
+    const response = await api.patch('/providers/settings/full/', payload)
     
-    showToast('Paramètres enregistrés avec succès', 'success')
-  } catch (error) {
-    showToast('Erreur lors de la sauvegarde', 'error')
+    if (response.data.success) {
+      showToast('Paramètres enregistrés avec succès', 'success')
+      
+      // Si les notifications push sont activées, s'assurer qu'elles sont configurées
+      if (settings.notifications.channels.push && pushPermissionState.value !== 'granted') {
+        await requestPushPermission()
+      }
+    } else {
+      showToast(response.data.message || 'Erreur lors de la sauvegarde', 'error')
+    }
+  } catch (error: any) {
+    console.error('Erreur sauvegarde paramètres:', error)
+    const message = error?.response?.data?.message || 'Erreur lors de la sauvegarde'
+    showToast(message, 'error')
   } finally {
     isSaving.value = false
   }
 }
 
-const loadSettings = () => {
-  const saved = localStorage.getItem('presso_settings')
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved)
-      Object.assign(settings, parsed)
-    } catch (e) {
-      console.error('Erreur chargement paramètres:', e)
+/**
+ * Demande la permission pour les notifications push
+ */
+const requestPushPermission = async () => {
+  if (!isNotificationSupported()) {
+    showToast('Les notifications ne sont pas supportées par votre navigateur', 'error')
+    return
+  }
+  
+  try {
+    const success = await initializeNotifications()
+    if (success) {
+      pushPermissionState.value = 'granted'
+      showToast('Notifications push activées', 'success')
+    } else {
+      pushPermissionState.value = getNotificationPermissionState()
+      if (pushPermissionState.value === 'denied') {
+        showToast('Vous avez bloqué les notifications. Modifiez les paramètres de votre navigateur.', 'error')
+      }
+    }
+  } catch (error) {
+    console.error('Erreur activation notifications:', error)
+  }
+}
+
+/**
+ * Gère le changement du toggle push
+ */
+const onPushToggle = async () => {
+  if (settings.notifications.channels.push) {
+    // Activer les notifications
+    if (pushPermissionState.value !== 'granted') {
+      await requestPushPermission()
+      // Si la permission n'est pas accordée, désactiver le toggle
+      if (pushPermissionState.value !== 'granted') {
+        settings.notifications.channels.push = false
+      }
+    }
+  } else {
+    // Désactiver les notifications
+    const token = getCurrentToken()
+    if (token) {
+      await disableNotifications()
     }
   }
 }
@@ -813,6 +1020,47 @@ onMounted(() => {
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+/* Permission states */
+.permission-warning {
+  color: #ef4444;
+  font-size: 11px;
+  display: block;
+  margin-top: 2px;
+}
+
+.permission-granted {
+  color: #10b981;
+  font-size: 11px;
+  display: block;
+  margin-top: 2px;
+}
+
+.toggle-switch.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toggle-switch.disabled input {
+  cursor: not-allowed;
+}
+
+/* Loading state */
+.loading-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 /* Responsive */

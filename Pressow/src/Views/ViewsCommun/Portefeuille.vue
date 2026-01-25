@@ -37,17 +37,19 @@
             </button>
           </div>
 
-          <!-- Solde en attente -->
+          <!-- Solde en cours (commandes payées non livrées) -->
           <div class="balance-card pending">
             <div class="balance-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12 6 12 12 16 14"/>
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                <line x1="12" y1="22.08" x2="12" y2="12"/>
               </svg>
             </div>
             <div class="balance-content">
-              <span class="balance-label">En attente de virement</span>
+              <span class="balance-label">Commandes en cours</span>
               <span class="balance-amount small">{{ formatCurrency(pendingBalance) }}</span>
+              <span class="balance-hint">Sera crédité à la livraison</span>
             </div>
           </div>
 
@@ -252,7 +254,7 @@
           </div>
           <h3>Retrait demandé !</h3>
           <p>Votre demande de retrait de <strong>{{ formatCurrency(lastWithdrawAmount) }}</strong> a été enregistrée.</p>
-          <p class="success-note">Le virement sera effectué sous 2 heures maximum.</p>
+          <p class="success-note">Vous recevrez le paiement sous quelques minutes.</p>
           <button class="btn-confirm" @click="closeSuccessModal">OK</button>
         </div>
       </div>
@@ -539,6 +541,12 @@ watch(activeFilter, async (newFilter) => {
 
 .balance-amount.small {
   font-size: 1.125rem;
+}
+
+.balance-hint {
+  font-size: 0.625rem;
+  color: #94a3b8;
+  margin-top: 0.125rem;
 }
 
 .withdraw-btn {

@@ -576,8 +576,30 @@ const loadUserData = (): void => {
 
 /**
  * Charge les données du provider depuis le backend
+ * IMPORTANT: Attend que l'auth soit prête pour éviter les erreurs 401
  */
 const loadProviderData = async (): Promise<void> => {
+  // Attendre que l'authentification soit prête avant de faire des appels API
+  if (!authStore.authReady) {
+    console.log('[DashboardLayout] En attente de l\'authentification...')
+    // Attendre jusqu'à 5 secondes que l'auth soit prête
+    let attempts = 0
+    while (!authStore.authReady && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      attempts++
+    }
+    if (!authStore.authReady) {
+      console.warn('[DashboardLayout] Timeout en attente de l\'auth')
+      return
+    }
+  }
+  
+  // Vérifier qu'on a bien un token avant de continuer
+  if (!authStore.accessToken) {
+    console.warn('[DashboardLayout] Pas de token, abandon du chargement')
+    return
+  }
+  
   isLoadingData.value = true
   try {
     // Charger les données du dashboard (provider, stats, wallet, photo, etc.)

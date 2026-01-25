@@ -130,6 +130,39 @@
               <span>Les nouvelles commandes apparaîtront ici</span>
             </div>
           </section>
+
+          <!-- Derniers paiements reçus -->
+          <section class="payments-section" v-if="recentPayments.length > 0">
+            <div class="section-header">
+              <h2>Paiements reçus</h2>
+              <router-link to="/Dashboard/Portefeuille" class="view-all-link">
+                Portefeuille
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              </router-link>
+            </div>
+
+            <div class="payments-list">
+              <div 
+                v-for="payment in recentPayments" 
+                :key="payment.id" 
+                class="payment-item"
+              >
+                <div class="payment-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="19" x2="12" y2="5"/>
+                    <polyline points="5 12 12 5 19 12"/>
+                  </svg>
+                </div>
+                <div class="payment-info">
+                  <span class="payment-order">{{ payment.order_numero || 'Paiement' }}</span>
+                  <span class="payment-time">{{ formatPaymentDate(payment.created) }}</span>
+                </div>
+                <span class="payment-amount">+{{ formatCurrency(payment.amount) }}</span>
+              </div>
+            </div>
+          </section>
         </div>
 
         <!-- Colonne droite : Checklist et partage -->
@@ -218,11 +251,13 @@ import DashboardLayout from '@/Components/ComponentsCommun/DashboardLayout.vue'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useOnboardingStore } from '@/stores/onboarding'
 import { useAuthStore } from '@/stores/auth'
+import { useWalletStore } from '@/stores/wallet'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
 const onboardingStore = useOnboardingStore()
 const authStore = useAuthStore()
+const walletStore = useWalletStore()
 
 // État local
 const isToggling = ref(false)
@@ -269,6 +304,13 @@ const shopUrl = computed(() => {
   return null
 })
 
+// Derniers paiements reçus (crédits)
+const recentPayments = computed(() => {
+  return walletStore.transactions
+    .filter(tx => tx.direction === 'credit' && tx.type === 'order_payment')
+    .slice(0, 3)
+})
+
 // Méthodes
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('fr-FR', {
@@ -289,6 +331,25 @@ function getStatusClass(status: string): string {
     cancelled: 'status-cancelled'
   }
   return classes[status] || ''
+}
+
+function formatPaymentDate(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  
+  if (minutes < 1) return 'À l\'instant'
+  if (minutes < 60) return `Il y a ${minutes} min`
+  if (hours < 24) return `Il y a ${hours}h`
+  
+  return date.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 function goToOrder(orderId: string): void {
@@ -327,8 +388,11 @@ async function copyLink(): Promise<void> {
 // Lifecycle
 onMounted(async () => {
   try {
-    await dashboardStore.fetchDashboard()
-    await dashboardStore.fetchShareLink()
+    await Promise.all([
+      dashboardStore.fetchDashboard(),
+      dashboardStore.fetchShareLink(),
+      walletStore.fetchTransactions({ limit: 10 })
+    ])
   } catch (error) {
     console.error('Erreur lors du chargement du dashboard:', error)
   }
@@ -662,6 +726,68 @@ onMounted(async () => {
 .status-cancelled {
   background: #fee2e2;
   color: #991b1b;
+}
+
+/* Payments section */
+.payments-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-top: 1.5rem;
+}
+
+.payments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.payment-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f0fdf4;
+  border-radius: 8px;
+}
+
+.payment-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.payment-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.payment-order {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.payment-time {
+  font-size: 0.625rem;
+  color: #64748b;
+}
+
+.payment-amount {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #10b981;
+  white-space: nowrap;
 }
 
 /* Empty state */

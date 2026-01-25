@@ -20,6 +20,7 @@ const MotDePasseOublie = () => import('@/Views/Auth/MotDePasseOublie.vue')
 // Dashboard et composants communs (Prestataire)
 const Dashboard = () => import('@/Views/ViewsCommun/Dashboard.vue')
 const Commandes = () => import('@/Views/ViewsCommun/Commandes.vue')
+const CollectionVerification = () => import('@/Views/ViewsCommun/CollectionVerification.vue')
 const Notifications = () => import('@/Views/ViewsCommun/Notifications.vue')
 const Portefeuille = () => import('@/Views/ViewsCommun/Portefeuille.vue')
 const Services = () => import('@/Views/ViewsCommun/Services.vue')
@@ -39,6 +40,7 @@ const Cart = () => import('@/Views/DashboardClient/Cart.vue')
 const Checkout = () => import('@/Views/DashboardClient/Checkout.vue')
 const ClientOrders = () => import('@/Views/DashboardClient/ClientOrders.vue')
 const OrderTracking = () => import('@/Views/DashboardClient/OrderTracking.vue')
+const OrderAdjustment = () => import('@/Views/DashboardClient/OrderAdjustment.vue')
 const ClientProfile = () => import('@/Views/DashboardClient/ClientProfile.vue')
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -133,6 +135,17 @@ const router = createRouter({
         requiresProvider: true,
         requiresOnboardingComplete: true,
         title: 'Commandes - Presso'
+      }
+    },
+    {
+      path: '/Dashboard/commandes/:orderId/verification',
+      name: 'collection-verification',
+      component: CollectionVerification,
+      meta: {
+        requiresAuth: true,
+        requiresProvider: true,
+        requiresOnboardingComplete: true,
+        title: 'Vérification collecte - Presso'
       }
     },
     {
@@ -258,6 +271,12 @@ const router = createRouter({
           meta: { title: 'Suivi Commande - Pressow' }
         },
         {
+          path: 'orders/:orderId/adjustment',
+          name: 'order-adjustment',
+          component: OrderAdjustment,
+          meta: { title: 'Vérification Commande - Pressow' }
+        },
+        {
           path: 'profile',
           name: 'client-profile',
           component: ClientProfile,
@@ -305,21 +324,45 @@ router.beforeEach(async (to, from, next) => {
   // ─────────────────────────────────────────────────────────────────────────
   
   if (to.meta.requiresAuth) {
-    // Attendre que l'auth soit prête
+    // Attendre que l'auth soit prête (avec un timeout de sécurité)
     if (!authStore.authReady) {
       try {
         await authStore.initAuth()
       } catch {
         // Ignorer les erreurs d'init
       }
+      
+      // Double vérification: attendre un peu si toujours pas prêt
+      // (au cas où initAuth aurait timeout mais le refresh est encore en cours)
+      if (!authStore.authReady) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
     }
 
     // Rediriger vers la connexion si non authentifié
-    if (!authStore.accessToken || !authStore.user) {
+    // On vérifie UNIQUEMENT le accessToken car le user peut être en cours de chargement
+    if (!authStore.accessToken) {
+      console.log('[Router] Pas de token, redirection vers login')
       return next({
         name: 'login',
         query: { redirect: to.fullPath }
       })
+    }
+    
+    // Si on a un token mais pas encore le user, attendre un peu
+    if (!authStore.user) {
+      console.log('[Router] Token présent mais user manquant, tentative de chargement...')
+      try {
+        await authStore.fetchProfile()
+      } catch (error) {
+        console.error('[Router] Échec chargement profil:', error)
+        // Si le fetchProfile échoue avec 401, le token est invalide
+        authStore.clearSession()
+        return next({
+          name: 'login',
+          query: { redirect: to.fullPath }
+        })
+      }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

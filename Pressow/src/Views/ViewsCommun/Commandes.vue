@@ -43,13 +43,27 @@
               <span class="order-numero">#{{ order.numero }}</span>
               <span class="order-date">{{ formatDate(order.created) }}</span>
             </div>
-            <div class="order-badges">
-              <span class="status-badge" :class="getStatusClass(order.statut)">
-                {{ order.statut_display }}
-              </span>
-              <span class="payment-badge" :class="getPaymentClass(order.payment_status)">
-                {{ order.payment_status_display }}
-              </span>
+            <!-- Badges organisés verticalement pour clarté -->
+            <div class="order-badges-stack">
+              <!-- Badge Statut Traitement (avec icône box) -->
+              <div class="badge-row">
+                <svg class="badge-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                </svg>
+                <span class="status-badge" :class="getStatusClass(order.statut)">
+                  {{ getStatusLabel(order.statut, order.statut_display) }}
+                </span>
+              </div>
+              <!-- Badge Paiement - Affiché uniquement si pertinent -->
+              <div class="badge-row" v-if="shouldShowPaymentBadge(order)">
+                <svg class="badge-icon payment-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                  <line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+                <span class="payment-badge" :class="getPaymentClass(order.payment_status)">
+                  {{ getPaymentLabelContextual(order) }}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -59,7 +73,7 @@
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                 <circle cx="12" cy="7" r="4"/>
               </svg>
-              <span>{{ order.client.first_name }} {{ order.client.last_name }}</span>
+              <span>{{ getClientName(order.client) }}</span>
             </div>
             <div class="address-info">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -73,12 +87,34 @@
           <div class="order-footer">
             <span class="order-amount">{{ formatCurrency(order.total_estime) }}</span>
             <div class="order-actions">
+              <!-- Bouton vérification pour commandes confirmées -->
+              <button 
+                v-if="order.statut === 'confirmed' && canVerifyCollection(order)"
+                class="verify-btn"
+                @click.stop="goToVerification(order)"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="3" y1="9" x2="21" y2="9"/>
+                  <line x1="9" y1="21" x2="9" y2="9"/>
+                </svg>
+                Vérifier
+              </button>
               <span v-if="order.statut === 'ready' && !order.is_delivery_validated" class="otp-hint">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                   <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
                 OTP requis
+              </span>
+              <!-- Badge ajustement requis -->
+              <span v-if="order.payment_status === 'adjustment_required'" class="adjustment-badge">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                Complément
               </span>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chevron">
                 <polyline points="9 18 15 12 9 6"/>
@@ -130,11 +166,11 @@
               <div class="detail-grid">
                 <div class="detail-item">
                   <span class="label">Nom</span>
-                  <span class="value">{{ selectedOrder.client.first_name }} {{ selectedOrder.client.last_name }}</span>
+                  <span class="value">{{ getClientName(selectedOrder.client) }}</span>
                 </div>
                 <div class="detail-item">
                   <span class="label">Téléphone</span>
-                  <span class="value">{{ selectedOrder.client.phone_number }}</span>
+                  <span class="value">{{ selectedOrder.client?.phone || selectedOrder.client?.phone_number || '-' }}</span>
                 </div>
               </div>
             </section>
@@ -386,10 +422,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import DashboardLayout from '@/Components/ComponentsCommun/DashboardLayout.vue'
 import { useOrdersStore, CANCELLATION_REASONS } from '@/stores/orders'
 import type { Order, OrderStatus } from '@/stores/orders'
 
+const router = useRouter()
 const ordersStore = useOrdersStore()
 
 // État local
@@ -478,6 +516,120 @@ function getPaymentClass(status: string): string {
   return classes[status] || ''
 }
 
+/**
+ * Retourne le libellé du statut avec fallback
+ */
+function getStatusLabel(status: OrderStatus, display?: string): string {
+  if (display) return display
+  const labels: Record<OrderStatus, string> = {
+    pending: 'En attente',
+    confirmed: 'Confirmée',
+    collected: 'Collectée',
+    in_progress: 'En cours',
+    ready: 'Prête',
+    delivered: 'Livrée',
+    cancelled: 'Annulée'
+  }
+  return labels[status] || status
+}
+
+/**
+ * Détermine si le badge de paiement doit être affiché
+ * Règle : Ne pas afficher si commande annulée ET paiement jamais effectué
+ */
+function shouldShowPaymentBadge(order: Order): boolean {
+  // Si commande annulée et paiement était en attente → pas de badge
+  if (order.statut === 'cancelled' && order.payment_status === 'pending') {
+    return false
+  }
+  return true
+}
+
+/**
+ * Retourne le libellé du paiement en fonction du contexte de la commande
+ * 
+ * Logique métier Pressow (paiement immédiat à la livraison) :
+ * - Client crée commande → pending + pending = "En attente paiement"
+ * - Prestataire accepte → confirmed + pending = "Client doit payer"
+ * - Client paie → confirmed + escrow = "Fonds en séquestre"
+ * - Workflow continue (collected → in_progress → ready) = toujours "Fonds en séquestre"
+ * - Livraison validée (OTP) → delivered + released = "Crédité sur portefeuille"
+ *   (Le paiement est IMMÉDIATEMENT crédité sur le portefeuille du prestataire)
+ * - Le client a 30 min pour faire une réclamation après livraison
+ * - Annulation après paiement → cancelled + refunded = "Remboursé au client"
+ * 
+ * NOTE: Grâce à la validation backend, on ne peut JAMAIS avoir :
+ * - collected/in_progress/ready/delivered avec payment_status=pending
+ */
+function getPaymentLabelContextual(order: Order): string {
+  const paymentStatus = order.payment_status
+  const orderStatus = order.statut
+  
+  switch (paymentStatus) {
+    case 'pending':
+      // Seulement possible pour pending ou confirmed
+      if (orderStatus === 'pending') {
+        return 'En attente paiement'
+      }
+      if (orderStatus === 'confirmed') {
+        return 'Client doit payer'
+      }
+      // Ce cas ne devrait JAMAIS arriver (bloqué par le backend)
+      return 'En attente paiement'
+      
+    case 'paid':
+      return 'Paiement reçu'
+      
+    case 'escrow':
+      // Argent bloqué en attendant la livraison
+      if (orderStatus === 'ready') {
+        return 'Séquestre • OTP requis'
+      }
+      return 'Fonds en séquestre'
+      
+    case 'released':
+      return 'Crédité sur portefeuille'
+      
+    case 'refunded':
+      return 'Remboursé au client'
+      
+    case 'failed':
+      return 'Échec paiement'
+      
+    default:
+      return paymentStatus
+  }
+}
+
+/**
+ * Retourne le nom du client avec fallback
+ * Backend renvoie: { nom, phone } ou { first_name, last_name, phone_number }
+ */
+function getClientName(client: { 
+  first_name?: string; 
+  last_name?: string; 
+  phone_number?: string;
+  nom?: string;
+  phone?: string;
+} | null): string {
+  if (!client) return 'Client inconnu'
+  
+  // Format backend: 'nom' est le nom complet
+  if (client.nom) return client.nom
+  
+  // Format frontend: first_name + last_name
+  const firstName = client.first_name || ''
+  const lastName = client.last_name || ''
+  const fullName = `${firstName} ${lastName}`.trim()
+  if (fullName) return fullName
+  
+  // Fallback sur le numéro de téléphone
+  if (client.phone_number) return client.phone_number
+  if (client.phone) return client.phone
+  
+  return 'Client'
+}
+
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('fr-FR', {
     style: 'decimal',
@@ -527,6 +679,25 @@ function closeOrderDetail(): void {
   selectedOrder.value = null
   ordersStore.selectOrder(null)
   otpCode.value = ''
+}
+
+/**
+ * Vérifie si on peut aller à la vérification pour cette commande
+ */
+function canVerifyCollection(order: Order): boolean {
+  // La commande doit être confirmée et payée
+  const paidStatuses = ['paid_pending_verification', 'paid', 'escrow']
+  return paidStatuses.includes(order.payment_status)
+}
+
+/**
+ * Navigue vers la page de vérification de collecte
+ */
+function goToVerification(order: Order): void {
+  router.push({ 
+    name: 'collection-verification', 
+    params: { orderId: order.id } 
+  })
 }
 
 function openRejectModal(): void {
@@ -825,9 +996,27 @@ onMounted(async () => {
   color: #94a3b8;
 }
 
-.order-badges {
+/* Badges empilés verticalement */
+.order-badges-stack {
   display: flex;
+  flex-direction: column;
   gap: 0.375rem;
+  align-items: flex-end;
+}
+
+.badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.badge-icon {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.badge-icon.payment-icon {
+  color: #059669;
 }
 
 .status-badge {
@@ -836,6 +1025,8 @@ onMounted(async () => {
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .status-badge.large {
@@ -843,24 +1034,79 @@ onMounted(async () => {
   padding: 0.375rem 0.75rem;
 }
 
-.status-pending { background: rgba(249, 161, 59, 0.12); color: #d97706; }
-.status-confirmed { background: rgba(55, 161, 239, 0.12); color: #37A1EF; }
-.status-progress { background: rgba(55, 161, 239, 0.2); color: #2589d4; }
-.status-ready { background: rgba(16, 185, 129, 0.12); color: #059669; }
-.status-delivered { background: rgba(100, 116, 139, 0.12); color: #475569; }
-.status-cancelled { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+/* Statuts de traitement - Couleurs distinctes */
+.status-pending { 
+  background: #fef3c7; 
+  color: #92400e; 
+  border: 1px solid #fcd34d;
+}
+.status-confirmed { 
+  background: #dbeafe; 
+  color: #1e40af; 
+  border: 1px solid #93c5fd;
+}
+.status-progress { 
+  background: #cffafe; 
+  color: #0e7490; 
+  border: 1px solid #67e8f9;
+}
+.status-ready { 
+  background: #d1fae5; 
+  color: #047857; 
+  border: 1px solid #6ee7b7;
+}
+.status-delivered { 
+  background: #e2e8f0; 
+  color: #334155; 
+  border: 1px solid #94a3b8;
+}
+.status-cancelled { 
+  background: #fee2e2; 
+  color: #b91c1c; 
+  border: 1px solid #f87171;
+}
 
+/* Badges de paiement - Style distinct avec icône carte */
 .payment-badge {
   font-size: 0.625rem;
   font-weight: 500;
-  padding: 0.25rem 0.5rem;
+  padding: 0.1875rem 0.5rem;
   border-radius: 4px;
+  white-space: nowrap;
+  font-style: italic;
 }
 
-.payment-pending { background: #fef3c7; color: #92400e; }
-.payment-paid, .payment-escrow { background: #dcfce7; color: #166534; }
-.payment-released { background: #d1fae5; color: #065f46; }
-.payment-refunded, .payment-failed { background: #fee2e2; color: #991b1b; }
+/* Paiements - Couleurs distinctes du statut traitement */
+.payment-pending { 
+  background: #fff7ed; 
+  color: #c2410c; 
+  border: 1px dashed #fb923c;
+}
+.payment-paid { 
+  background: #f0fdf4; 
+  color: #15803d; 
+  border: 1px solid #86efac;
+}
+.payment-escrow { 
+  background: #eff6ff; 
+  color: #1d4ed8; 
+  border: 1px solid #93c5fd;
+}
+.payment-released { 
+  background: #ecfdf5; 
+  color: #047857; 
+  border: 1px solid #34d399;
+}
+.payment-refunded { 
+  background: #fdf4ff; 
+  color: #a21caf; 
+  border: 1px solid #e879f9;
+}
+.payment-failed { 
+  background: #fef2f2; 
+  color: #b91c1c; 
+  border: 1px dashed #f87171;
+}
 
 .order-body {
   display: flex;
@@ -900,6 +1146,37 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.verify-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: white;
+  background: var(--primary-color, #3b82f6);
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.verify-btn:hover {
+  background: #2563eb;
+}
+
+.adjustment-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
 }
 
 .otp-hint {

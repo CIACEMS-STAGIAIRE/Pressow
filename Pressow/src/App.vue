@@ -1,19 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { setSessionCallback } from '@/stores/auth'
+import { setSessionCallback, useAuthStore } from '@/stores/auth'
+import {
+  initializeNotifications,
+  onNotificationReceived,
+  onNotificationClick,
+  isNotificationSupported,
+} from '@/services/notifications'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 
-// Toast pour la session expirée
+// Toast pour la session et les notifications
 const showSessionToast = ref(false)
 const sessionToastMessage = ref('')
-const sessionToastType = ref<'info' | 'warning' | 'error'>('warning')
+const sessionToastType = ref<'info' | 'warning' | 'error' | 'success'>('warning')
 
 let toastTimeout: ReturnType<typeof setTimeout> | null = null
 
-const showToast = (message: string, type: 'info' | 'warning' | 'error' = 'warning', duration = 5000) => {
+const showToast = (message: string, type: 'info' | 'warning' | 'error' | 'success' = 'warning', duration = 5000) => {
   sessionToastMessage.value = message
   sessionToastType.value = type
   showSessionToast.value = true
@@ -26,6 +33,46 @@ const showToast = (message: string, type: 'info' | 'warning' | 'error' = 'warnin
 
 // Pages publiques où on ne redirige pas après expiration
 const publicRoutes = ['/Connexion', '/Inscription', '/mot-de-passe-oublie', '/']
+
+// Cleanup functions pour les listeners de notifications
+let unsubscribeNotification: (() => void) | null = null
+let unsubscribeClick: (() => void) | null = null
+
+/**
+ * Initialise les notifications push si l'utilisateur est connecté
+ */
+async function setupNotifications() {
+  if (!authStore.isAuthenticated || !isNotificationSupported()) {
+    return
+  }
+
+  try {
+    // Attendre un peu pour ne pas bloquer le chargement initial
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    const success = await initializeNotifications()
+    if (success) {
+      console.log('[App] Notifications push activées')
+      
+      // Écouter les notifications reçues au premier plan
+      unsubscribeNotification = onNotificationReceived((payload) => {
+        // Afficher un toast pour la notification reçue
+        if (payload.title) {
+          showToast(payload.body || payload.title, 'info', 5000)
+        }
+      })
+      
+      // Écouter les clics sur les notifications (depuis le Service Worker)
+      unsubscribeClick = onNotificationClick(({ url }) => {
+        if (url && url !== '/') {
+          router.push(url)
+        }
+      })
+    }
+  } catch (error) {
+    console.warn('[App] Erreur lors de l\'initialisation des notifications:', error)
+  }
+}
 
 onMounted(() => {
   // Écouter les événements de session
@@ -48,11 +95,28 @@ onMounted(() => {
       }
     }
   })
+  
+  // Initialiser les notifications si déjà connecté
+  if (authStore.isAuthenticated) {
+    setupNotifications()
+  }
 })
+
+// Réagir aux changements d'état de connexion
+watch(
+  () => authStore.isAuthenticated,
+  (isAuthenticated) => {
+    if (isAuthenticated) {
+      setupNotifications()
+    }
+  }
+)
 
 onUnmounted(() => {
   setSessionCallback(null)
   if (toastTimeout) clearTimeout(toastTimeout)
+  if (unsubscribeNotification) unsubscribeNotification()
+  if (unsubscribeClick) unsubscribeClick()
 })
 </script>
 
@@ -80,11 +144,15 @@ onUnmounted(() => {
             <line x1="15" y1="9" x2="9" y2="15"></line>
             <line x1="9" y1="9" x2="15" y2="15"></line>
           </svg>
-          <!-- Icon info -->
-          <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <!-- Icon success -->
+          <svg v-else-if="sessionToastType === 'success'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            <polyline points="16 8 10 14 8 12"></polyline>
+          </svg>
+          <!-- Icon info (notification bell) -->
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
           </svg>
         </div>
         <p class="session-toast__message">{{ sessionToastMessage }}</p>
@@ -132,6 +200,11 @@ onUnmounted(() => {
   border: 1px solid #3b82f6;
 }
 
+.session-toast--success {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border: 1px solid #10b981;
+}
+
 .session-toast__icon {
   flex-shrink: 0;
 }
@@ -146,6 +219,10 @@ onUnmounted(() => {
 
 .session-toast--info .session-toast__icon {
   color: #2563eb;
+}
+
+.session-toast--success .session-toast__icon {
+  color: #059669;
 }
 
 .session-toast__message {

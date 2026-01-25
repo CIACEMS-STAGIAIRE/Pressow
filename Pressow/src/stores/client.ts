@@ -267,6 +267,74 @@ export const useClientStore = defineStore('client', () => {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AJUSTEMENT PAIEMENT (Vérification à la collecte)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  /**
+   * Récupère le statut d'ajustement d'une commande
+   */
+  async function fetchAdjustmentStatus(orderId: string) {
+    try {
+      const response = await api.get(`/orders/${orderId}/adjustment/`)
+      return response.data
+    } catch (err: any) {
+      error.value = err.response?.data?.detail || 'Erreur lors de la récupération de l\'ajustement'
+      return null
+    }
+  }
+  
+  /**
+   * Initie le paiement du complément
+   */
+  async function completeAdjustment(orderId: string, paymentMethod: string = 'orange_money') {
+    isLoading.value = true
+    error.value = null
+    try {
+      const response = await api.post(`/orders/${orderId}/adjustment/complete/`, {
+        payment_method: paymentMethod
+      })
+      return { success: true, data: response.data }
+    } catch (err: any) {
+      error.value = err.response?.data?.detail || 'Erreur lors du paiement du complément'
+      return { success: false, error: error.value }
+    } finally {
+      isLoading.value = false
+    }
+  }
+  
+  /**
+   * Accepte la réduction du linge
+   */
+  async function acceptReduction(orderId: string) {
+    isLoading.value = true
+    error.value = null
+    try {
+      const response = await api.post(`/orders/${orderId}/adjustment/reduce/`)
+      // Recharger les commandes
+      await fetchClientOrders()
+      return { success: true, data: response.data }
+    } catch (err: any) {
+      error.value = err.response?.data?.detail || 'Erreur lors de l\'acceptation de la réduction'
+      return { success: false, error: error.value }
+    } finally {
+      isLoading.value = false
+    }
+  }
+  
+  /**
+   * Récupère le portefeuille client
+   */
+  async function fetchWallet() {
+    try {
+      const response = await api.get('/wallet/')
+      return response.data
+    } catch (err: any) {
+      console.error('fetchWallet error:', err)
+      return null
+    }
+  }
+
   // Location
   function setCurrentLocation(lat: number, lng: number) {
     currentLocation.value = { lat, lng }
@@ -359,6 +427,11 @@ export const useClientStore = defineStore('client', () => {
     fetchClientOrders,
     fetchOrderDetail,
     fetchOrderDeliveryCode,
+    // Actions - Ajustement
+    fetchAdjustmentStatus,
+    completeAdjustment,
+    acceptReduction,
+    fetchWallet,
     // Location
     setCurrentLocation,
     getCurrentPosition,

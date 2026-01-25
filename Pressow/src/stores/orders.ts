@@ -16,7 +16,10 @@ import api from '@/services/api'
 export type OrderStatus = 'pending' | 'confirmed' | 'collected' | 'in_progress' | 'ready' | 'delivered' | 'cancelled'
 
 /** Statuts de paiement */
-export type PaymentStatus = 'pending' | 'paid' | 'escrow' | 'released' | 'refunded' | 'failed'
+export type PaymentStatus = 'pending' | 'paid_pending_verification' | 'paid' | 'adjustment_required' | 'escrow' | 'released' | 'refunded' | 'partially_refunded' | 'failed'
+
+/** Mode de comptage */
+export type CountingMode = 'client' | 'collector'
 
 /** Statuts de payout */
 export type PayoutStatus = 'not_applicable' | 'pending' | 'scheduled' | 'processing' | 'completed' | 'failed'
@@ -24,9 +27,13 @@ export type PayoutStatus = 'not_applicable' | 'pending' | 'scheduled' | 'process
 /** Client de la commande */
 export interface OrderClient {
   id: string
-  first_name: string
-  last_name: string
-  phone_number: string
+  // Format backend (OrderSerializer.get_client)
+  nom?: string
+  phone?: string
+  // Format alternatif
+  first_name?: string
+  last_name?: string
+  phone_number?: string
   email?: string
 }
 
@@ -68,6 +75,41 @@ export interface Order {
   statut: OrderStatus
   statut_display: string
   statut_changed_at?: string
+  
+  // Mode de comptage
+  counting_mode: CountingMode
+  counting_mode_display?: string
+  
+  // Quantités estimées par le client
+  estimated_weight?: number
+  estimated_pieces?: number
+  
+  // Quantités vérifiées par le livreur
+  verified_weight?: number
+  verified_pieces?: number
+  quantity_verified_at?: string
+  verification_status?: {
+    verified: boolean
+    verified_at?: string
+    estimated: {
+      weight?: number
+      pieces?: number
+    }
+    verified_values: {
+      weight?: number
+      pieces?: number
+    }
+    has_discrepancy: boolean
+  }
+  
+  // Ajustement paiement
+  initial_amount_paid?: number
+  adjustment_amount?: number
+  adjustment_deadline?: string
+  adjustment_paid_at?: string
+  credit_issued?: number
+  client_accepted_reduction?: boolean
+  has_adjustment?: boolean
   
   // Montants
   total_estime: number
@@ -493,6 +535,82 @@ export const useOrdersStore = defineStore('orders', () => {
   }
   
   // ═══════════════════════════════════════════════════════════════════════════
+  // VÉRIFICATION À LA COLLECTE
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  /**
+   * Vérifie la quantité réelle à la collecte (livreur)
+   */
+  async function verifyQuantity(
+    orderId: string, 
+    payload: { verified_weight?: number; verified_pieces?: number; notes?: string; timeout_minutes?: number }
+  ): Promise<{
+    verification: {
+      adjustment_needed: boolean
+      adjustment_amount: number
+      new_total: number
+      initial_paid: number
+      estimated: { weight?: number; pieces?: number }
+      verified: { weight?: number; pieces?: number }
+      deadline?: string
+      credit_issued: number
+    }
+    order: Order
+    message: string
+  }> {
+    try {
+      isLoading.value = true
+      error.value = null
+      
+      const { data } = await api.post(`/providers/orders/${orderId}/verify-quantity/`, payload)
+      
+      // Mettre à jour la commande dans le store
+      const index = orders.value.findIndex(o => o.id === orderId)
+      if (index !== -1) {
+        orders.value[index] = data.order
+      }
+      if (selectedOrder.value?.id === orderId) {
+        selectedOrder.value = data.order
+      }
+      
+      return data
+    } catch (err: any) {
+      error.value = err.response?.data?.detail ?? 'Erreur lors de la vérification'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+  
+  /**
+   * Confirme la collecte après vérification (livreur)
+   */
+  async function confirmCollection(orderId: string): Promise<Order> {
+    try {
+      isLoading.value = true
+      error.value = null
+      
+      const { data } = await api.post<Order>(`/providers/orders/${orderId}/confirm-collection/`)
+      
+      // Mettre à jour la commande dans le store
+      const index = orders.value.findIndex(o => o.id === orderId)
+      if (index !== -1) {
+        orders.value[index] = data
+      }
+      if (selectedOrder.value?.id === orderId) {
+        selectedOrder.value = data
+      }
+      
+      return data
+    } catch (err: any) {
+      error.value = err.response?.data?.detail ?? 'Erreur lors de la confirmation de collecte'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
   // HELPERS
   // ═══════════════════════════════════════════════════════════════════════════
   
@@ -605,6 +723,10 @@ export const useOrdersStore = defineStore('orders', () => {
     validateDeliveryOTP,
     regenerateDeliveryOTP,
     fetchOTPStatus,
+    
+    // Actions - Vérification à la collecte
+    verifyQuantity,
+    confirmCollection,
     
     // Helpers
     setFilters,
