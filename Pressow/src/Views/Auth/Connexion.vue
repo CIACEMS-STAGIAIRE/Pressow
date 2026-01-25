@@ -65,11 +65,24 @@
           <!-- Mot de passe -->
           <TextElement
             name="password"
-            input-type="password"
+            :input-type="showPassword ? 'text' : 'password'"
             placeholder="Mot de passe"
             field-name="Mot de passe"
             :rules="['required']"
-          />
+          >
+            <template #addon-after>
+              <button type="button" class="password-eye-btn" @click.prevent="showPassword = !showPassword" tabindex="-1">
+                <svg v-if="!showPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </template>
+          </TextElement>
 
           <!-- Lien mot de passe oublié -->
           <StaticElement name="forgot_password" :attrs="{ class: 'forgot-password-container' }">
@@ -106,7 +119,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import type { AuthUser, NotificationType } from '@/types/types'
 
@@ -125,11 +138,14 @@ interface Notification {
 // ====================================================================
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const loginForm$ = ref<any>(null)
 const isLoading = ref(false)
 const notifications = ref<Notification[]>([])
+const showPassword = ref(false)
+const redirectPath = ref<string | null>(null)
 
 // ====================================================================
 // FONCTIONS
@@ -147,6 +163,13 @@ const removeNotification = (notification: Notification): void => {
 }
 
 const getRedirectPath = (user: AuthUser): string => {
+  // Si une redirection était en attente (après expiration de session), l'utiliser
+  if (redirectPath.value) {
+    const path = redirectPath.value
+    redirectPath.value = null
+    return path
+  }
+  
   // Prestataires (provider_owner, provider_manager)
   if (user.provider || user.role === 'provider_owner' || user.role === 'provider_manager') {
     return '/Dashboard'
@@ -180,7 +203,25 @@ const handleSubmit = async (form$: any): Promise<void> => {
 }
 
 onMounted(() => {
-  console.log('Connexion.vue mounted')
+  // Vérifier si l'utilisateur a été redirigé après expiration de session
+  const reason = route.query.reason as string | undefined
+  const redirect = route.query.redirect as string | undefined
+  
+  if (reason === 'session_expired') {
+    showNotification(
+      'error', 
+      'Session expirée', 
+      'Votre session a expiré pour des raisons de sécurité. Veuillez vous reconnecter.'
+    )
+    
+    // Sauvegarder le chemin de redirection pour après la connexion
+    if (redirect && redirect !== '/Connexion') {
+      redirectPath.value = redirect
+    }
+    
+    // Nettoyer l'URL
+    router.replace({ path: '/Connexion', query: {} })
+  }
 })
 </script>
 
@@ -255,36 +296,37 @@ onMounted(() => {
   margin-top: 6px !important;
 }
 
-/* Wrapper pour champ mot de passe avec bouton œil */
-.password-field-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-/* Bouton toggle visibilité mot de passe */
-.password-toggle-btn {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+/* Bouton œil dans l'addon Vueform */
+.password-eye-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   cursor: pointer;
   padding: 8px;
-  color: #6B7280;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s ease;
-  z-index: 10;
+  margin-right: 8px;
+  color: #9CA3AF;
+  transition: all 0.2s ease;
+  height: 100%;
+  border-radius: 6px;
 }
 
-.password-toggle-btn:hover {
+.password-eye-btn:hover {
   color: #039AE3;
+  background: rgba(3, 154, 227, 0.08);
 }
 
-.password-toggle-btn i {
-  font-size: 16px;
+.password-eye-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Style de l'addon Vueform */
+.vf-addon-after {
+  background: transparent !important;
+  border-left: none !important;
+  padding-right: 4px !important;
 }
 </style>
 

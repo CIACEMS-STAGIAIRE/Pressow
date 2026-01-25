@@ -19,11 +19,19 @@
       'sidebar-collapsed': isSidebarCollapsed
     }]">
       <div class="sidebar-content">
-        <!-- User Info -->
+        <!-- User Info avec logo/photo du provider -->
         <div class="user-info" :class="{ 'user-info-collapsed': isSidebarCollapsed }">
           <div class="user-info-container">
-            <div class="user-avatar">
-              {{ userInitial }}
+            <!-- Avatar avec logo/photo ou initiales -->
+            <div class="user-avatar" :class="{ 'has-image': providerPhoto || providerLogo }">
+              <img 
+                v-if="providerPhoto || providerLogo" 
+                :src="(providerPhoto || providerLogo) ?? undefined" 
+                :alt="displayName"
+                class="avatar-image"
+                @error="handleImageError"
+              />
+              <span v-else class="avatar-initial">{{ userInitial }}</span>
             </div>
             <div class="user-details" v-if="!isSidebarCollapsed">
               <p class="user-name">{{ displayName }}</p>
@@ -32,22 +40,21 @@
             <!-- Collapse Toggle Button -->
             <div class="collapse-toggle">
               <button class="collapse-btn" @click="toggleSidebarCollapse">
-                <i :class="isSidebarCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left'"></i>
+                <!-- SVG inline au lieu de FontAwesome -->
+                <svg v-if="isSidebarCollapsed" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
               </button>
             </div>
           </div>
 
-          <!-- Affichage des prestations de la boutique active -->
-          <div v-if="!isSidebarCollapsed && activeShop && activeShop.prestations && activeShop.prestations.length > 0"
-            class="prestations-section">
-            <p class="prestations-title">Prestations proposées</p>
-            <div class="prestations-list">
-              <div v-for="prestation in activeShop.prestations" :key="prestation" class="prestation-badge"
-                :class="getPrestationBadgeClass(prestation)">
-                <i :class="getPrestationIcon(prestation)"></i>
-                <span>{{ getPrestationLabel(prestation) }}</span>
-              </div>
-            </div>
+          <!-- Indicateur de statut ouvert/fermé -->
+          <div v-if="!isSidebarCollapsed" class="provider-status">
+            <span :class="['status-indicator', isProviderOpen ? 'status-open' : 'status-closed']"></span>
+            <span class="status-text">{{ isProviderOpen ? 'Ouvert' : 'Fermé' }}</span>
           </div>
         </div>
 
@@ -59,14 +66,22 @@
           <div class="quick-access" :class="{ 'quick-access-collapsed': isSidebarCollapsed }">
             <!-- Tableau de bord -->
             <button @click="navigateTo('/Dashboard')" :class="['quick-btn', { 'quick-btn-active': isActive('/Dashboard') }]" :title="isSidebarCollapsed ? 'Tableau de bord' : ''">
-              <i class="fas fa-home"></i>
+              <!-- SVG Home -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
               <span v-if="!isSidebarCollapsed">Accueil</span>
             </button>
             <!-- Notifications (Cloche) -->
             <button @click="navigateTo('/dashboard/notifications')" :class="['quick-btn notification-btn', { 'quick-btn-active': isActive('/dashboard/notifications') }]" :title="isSidebarCollapsed ? 'Notifications' : ''">
-              <i class="fas fa-bell"></i>
+              <!-- SVG Bell -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
               <span v-if="!isSidebarCollapsed">Alertes</span>
-              <div class="notification-badge" v-if="unreadNotifications > 0">{{ unreadNotifications }}</div>
+              <div class="notification-badge" v-if="unreadNotifications > 0">{{ unreadNotifications > 99 ? '99+' : unreadNotifications }}</div>
             </button>
           </div>
 
@@ -76,29 +91,52 @@
           <div class="nav-module" v-if="!isSidebarCollapsed">
             <button class="module-header" @click="toggleModule('gestion')" :class="{ 'module-open': expandedModules.gestion }">
               <div class="module-icon">
-                <i class="fas fa-tasks"></i>
+                <!-- SVG Clipboard/Tasks -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 11l3 3L22 4"></path>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                </svg>
               </div>
               <span class="module-title">Gestion Interne</span>
-              <i class="fas fa-chevron-down module-chevron" :class="{ 'chevron-rotated': expandedModules.gestion }"></i>
+              <!-- SVG Chevron -->
+              <svg class="module-chevron" :class="{ 'chevron-rotated': expandedModules.gestion }" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
             </button>
             <div class="module-content" v-show="expandedModules.gestion">
               <!-- Commandes -->
               <button @click="navigateToSubitem('/Dashboard/Commandes', 'gestion')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/Dashboard/Commandes') }]">
-                <i class="fas fa-shopping-bag"></i>
+                <!-- SVG Shopping Bag -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <path d="M16 10a4 4 0 0 1-8 0"></path>
+                </svg>
                 <span>Commandes</span>
                 <div class="nav-badge" v-if="pendingOrdersCount > 0">{{ pendingOrdersCount }}</div>
               </button>
               <!-- Portefeuille -->
               <button v-if="!isManager" @click="navigateToSubitem('/dashboard/portefeuille', 'gestion')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/portefeuille') }]">
-                <i class="fas fa-wallet"></i>
+                <!-- SVG Wallet -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+                  <path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z"></path>
+                </svg>
                 <span>Portefeuille</span>
-                <div class="nav-badge wallet-badge" v-if="walletBalance > 0">{{ walletBalance }}€</div>
+                <div class="nav-badge wallet-badge" v-if="walletBalance > 0">{{ formatCurrency(walletBalance) }}</div>
               </button>
             </div>
           </div>
           <!-- Collapsed: Commandes icon only -->
           <button v-if="isSidebarCollapsed" @click="navigateTo('/Dashboard/Commandes')" :class="['nav-item', 'nav-item-collapsed', { 'nav-item-active': isActive('/Dashboard/Commandes') }]" title="Commandes">
-            <div class="nav-icon"><i class="fas fa-shopping-bag"></i></div>
+            <div class="nav-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <path d="M16 10a4 4 0 0 1-8 0"></path>
+              </svg>
+            </div>
             <div class="nav-badge-collapsed" v-if="pendingOrdersCount > 0">{{ pendingOrdersCount }}</div>
           </button>
 
@@ -108,33 +146,62 @@
           <div class="nav-module" v-if="!isSidebarCollapsed">
             <button class="module-header" @click="toggleModule('relation')" :class="{ 'module-open': expandedModules.relation }">
               <div class="module-icon">
-                <i class="fas fa-users"></i>
+                <!-- SVG Users -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
               </div>
               <span class="module-title">Relation Client</span>
-              <i class="fas fa-chevron-down module-chevron" :class="{ 'chevron-rotated': expandedModules.relation }"></i>
+              <svg class="module-chevron" :class="{ 'chevron-rotated': expandedModules.relation }" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
             </button>
             <div class="module-content" v-show="expandedModules.relation">
               <!-- Annuaire Clients -->
               <button @click="navigateToSubitem('/dashboard/clients', 'relation')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/clients') }]">
-                <i class="fas fa-address-book"></i>
+                <!-- SVG Address Book -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                  <path d="M15 16H9"></path>
+                </svg>
                 <span>Annuaire Clients</span>
               </button>
               <!-- Avis & Témoignages -->
               <button @click="navigateToSubitem('/dashboard/avis', 'relation')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/avis') }]">
-                <i class="fas fa-star"></i>
+                <!-- SVG Star -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
                 <span>Avis & Témoignages</span>
                 <div class="nav-badge rating-badge">{{ userRating }}</div>
               </button>
               <!-- Marketing -->
               <button @click="navigateToSubitem('/dashboard/marketing', 'relation')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/marketing') }]">
-                <i class="fas fa-bullhorn"></i>
+                <!-- SVG Megaphone -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
                 <span>Marketing</span>
               </button>
             </div>
           </div>
           <!-- Collapsed: Relation Client icon only -->
           <button v-if="isSidebarCollapsed" @click="navigateTo('/dashboard/clients')" :class="['nav-item', 'nav-item-collapsed', { 'nav-item-active': isActive('/dashboard/clients') || isActive('/dashboard/avis') || isActive('/dashboard/marketing') }]" title="Relation Client">
-            <div class="nav-icon"><i class="fas fa-users"></i></div>
+            <div class="nav-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
           </button>
 
           <!-- ═══════════════════════════════════════════════════════════ -->
@@ -143,27 +210,51 @@
           <div class="nav-module" v-if="!isSidebarCollapsed">
             <button class="module-header" @click="toggleModule('rh')" :class="{ 'module-open': expandedModules.rh }">
               <div class="module-icon">
-                <i class="fas fa-user-tie"></i>
+                <!-- SVG User Tie -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                  <line x1="12" y1="11" x2="12" y2="17"></line>
+                  <line x1="9" y1="14" x2="15" y2="14"></line>
+                </svg>
               </div>
               <span class="module-title">Ressources Humaines</span>
-              <i class="fas fa-chevron-down module-chevron" :class="{ 'chevron-rotated': expandedModules.rh }"></i>
+              <svg class="module-chevron" :class="{ 'chevron-rotated': expandedModules.rh }" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
             </button>
             <div class="module-content" v-show="expandedModules.rh">
               <!-- Employés -->
               <button @click="navigateToSubitem('/dashboard/employes', 'rh')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/employes') }]">
-                <i class="fas fa-id-badge"></i>
+                <!-- SVG ID Badge -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="12" cy="10" r="3"></circle>
+                  <path d="M7 17h10"></path>
+                </svg>
                 <span>Employés</span>
               </button>
               <!-- Planning -->
               <button @click="navigateToSubitem('/dashboard/planning', 'rh')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/planning') }]">
-                <i class="fas fa-calendar-alt"></i>
+                <!-- SVG Calendar -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
                 <span>Planning</span>
               </button>
             </div>
           </div>
           <!-- Collapsed: RH icon only -->
           <button v-if="isSidebarCollapsed" @click="navigateTo('/dashboard/employes')" :class="['nav-item', 'nav-item-collapsed', { 'nav-item-active': isActive('/dashboard/employes') || isActive('/dashboard/planning') }]" title="Ressources Humaines">
-            <div class="nav-icon"><i class="fas fa-user-tie"></i></div>
+            <div class="nav-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
           </button>
 
           <!-- ═══════════════════════════════════════════════════════════ -->
@@ -172,14 +263,23 @@
           <div class="nav-module-single" v-if="!isSidebarCollapsed">
             <button class="module-header module-single" @click="navigateTo('/dashboard/statistics')" :class="{ 'module-active': isActive('/dashboard/statistics') }">
               <div class="module-icon">
-                <i class="fas fa-chart-pie"></i>
+                <!-- SVG Chart Pie -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+                  <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+                </svg>
               </div>
               <span class="module-title">Analyse et Rapports</span>
             </button>
           </div>
           <!-- Collapsed: Analyse icon only -->
           <button v-if="isSidebarCollapsed" @click="navigateTo('/dashboard/statistics')" :class="['nav-item', 'nav-item-collapsed', { 'nav-item-active': isActive('/dashboard/statistics') }]" title="Analyse et Rapports">
-            <div class="nav-icon"><i class="fas fa-chart-pie"></i></div>
+            <div class="nav-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+                <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+              </svg>
+            </div>
           </button>
 
           <!-- ═══════════════════════════════════════════════════════════ -->
@@ -188,32 +288,63 @@
           <div class="nav-module" v-if="!isSidebarCollapsed">
             <button class="module-header" @click="toggleModule('config')" :class="{ 'module-open': expandedModules.config }">
               <div class="module-icon">
-                <i class="fas fa-cog"></i>
+                <!-- SVG Settings -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
               </div>
               <span class="module-title">Configuration</span>
-              <i class="fas fa-chevron-down module-chevron" :class="{ 'chevron-rotated': expandedModules.config }"></i>
+              <svg class="module-chevron" :class="{ 'chevron-rotated': expandedModules.config }" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
             </button>
             <div class="module-content" v-show="expandedModules.config">
               <!-- Mes Services -->
               <button @click="navigateToSubitem('/dashboard/services', 'config')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/services') }]">
-                <i class="fas fa-concierge-bell"></i>
+                <!-- SVG Service Bell -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"></path>
+                  <path d="M1 17h22"></path>
+                  <path d="M6 17v1a3 3 0 0 0 6 0v-1"></path>
+                </svg>
                 <span>Mes Services</span>
               </button>
               <!-- Profil -->
               <button @click="navigateToSubitem('/dashboard/profile', 'config')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/profile') }]">
-                <i class="fas fa-user"></i>
+                <!-- SVG User -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
                 <span>Profil</span>
               </button>
               <!-- Paramètres -->
               <button @click="navigateToSubitem('/dashboard/parametres', 'config')" :class="['nav-subitem', { 'nav-subitem-active': isActive('/dashboard/parametres') }]">
-                <i class="fas fa-sliders-h"></i>
+                <!-- SVG Sliders -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="4" y1="21" x2="4" y2="14"></line>
+                  <line x1="4" y1="10" x2="4" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12" y2="3"></line>
+                  <line x1="20" y1="21" x2="20" y2="16"></line>
+                  <line x1="20" y1="12" x2="20" y2="3"></line>
+                  <line x1="1" y1="14" x2="7" y2="14"></line>
+                  <line x1="9" y1="8" x2="15" y2="8"></line>
+                  <line x1="17" y1="16" x2="23" y2="16"></line>
+                </svg>
                 <span>Paramètres</span>
               </button>
             </div>
           </div>
           <!-- Collapsed: Config icon only -->
           <button v-if="isSidebarCollapsed" @click="navigateTo('/dashboard/services')" :class="['nav-item', 'nav-item-collapsed', { 'nav-item-active': isActive('/dashboard/services') || isActive('/dashboard/profile') || isActive('/dashboard/parametres') }]" title="Configuration">
-            <div class="nav-icon"><i class="fas fa-cog"></i></div>
+            <div class="nav-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </div>
           </button>
         </nav>
 
@@ -223,7 +354,12 @@
         <button class="logout-btn" @click="handleLogout" :disabled="isLoggingOut"
           :title="isSidebarCollapsed ? 'Déconnexion' : ''">
           <div class="logout-icon">
-            <i class="fas fa-sign-out-alt"></i>
+            <!-- SVG Logout -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
           </div>
           <span class="logout-text" v-if="!isSidebarCollapsed">
             {{ isLoggingOut ? 'Déconnexion...' : 'Déconnexion' }}
@@ -239,7 +375,12 @@
     <div v-if="showLogoutModal" class="modal-overlay">
       <div class="modal-content">
         <div class="modal-header">
-          <i class="fas fa-sign-out-alt modal-icon"></i>
+          <!-- SVG Logout Icon -->
+          <svg class="modal-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
           <h3>Confirmer la déconnexion</h3>
         </div>
         <div class="modal-body">
@@ -250,7 +391,12 @@
             Annuler
           </button>
           <button class="confirm-logout-btn" @click="confirmLogout" :disabled="isLoggingOut">
-            <i class="fas fa-sign-out-alt"></i>
+            <!-- SVG Logout -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
             {{ isLoggingOut ? 'Déconnexion...' : 'Se déconnecter' }}
           </button>
         </div>
@@ -260,9 +406,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useDashboardStore } from '@/stores/dashboard'
+import { useOnboardingStore } from '@/stores/onboarding'
+import api from '@/services/api'
+import { getImageUrl } from '@/utils/media'
 
 // ====================================================================
 // TYPES ET INTERFACES
@@ -328,6 +478,8 @@ interface Notification {
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const dashboardStore = useDashboardStore()
+const onboardingStore = useOnboardingStore()
 
 // États de l'interface
 const sidebarOpen = ref(false)
@@ -335,6 +487,7 @@ const showLogoutModal = ref(false)
 const isLoggingOut = ref(false)
 const isSidebarCollapsed = ref(false)
 const notificationInterval = ref<number | null>(null)
+const isLoadingData = ref(false)
 
 // États des modules dépliables (initialisé vide, sera défini au montage)
 const expandedModules = ref({
@@ -362,31 +515,43 @@ const routeToModule: Record<string, 'gestion' | 'relation' | 'rh' | 'config'> = 
 const displayUser = ref<User | null>(null)
 const activeShop = ref<Shop | null>(null)
 
-// Données de navigation
-const pendingOrdersCount = ref(0)
-const userRating = ref('4.8')
-const walletBalance = ref(125.50)
+// Données de navigation (utilise les stores pour les vraies données)
 const unreadNotifications = ref(0)
+
+// Données provider depuis le backend
+const providerLogo = ref<string | null>(null)
+const providerPhoto = ref<string | null>(null)
 
 // ====================================================================
 // COMPUTED PROPERTIES
 // ====================================================================
 
+// Utilise les données du store dashboard (vraies données backend)
+const providerName = computed(() => {
+  return dashboardStore.provider?.name || onboardingStore.businessName || displayUser.value?.companyName || 'Mon Pressing'
+})
+
 const userInitial = computed(() => {
-  return displayUser.value?.name?.charAt(0).toUpperCase() || 'U'
+  return providerName.value?.charAt(0).toUpperCase() || 'P'
 })
 
 const displayName = computed(() => {
-  return displayUser.value?.displayName || displayUser.value?.name || 'Utilisateur'
+  return providerName.value
 })
 
 const displayPhone = computed(() => {
-  return displayUser.value?.phone || 'Non renseigné'
+  return authStore.user?.phone || displayUser.value?.phone || 'Non renseigné'
 })
 
 const isManager = computed(() => {
-  return displayUser.value?.role === 'manager'
+  return authStore.user?.role === 'provider_manager' || displayUser.value?.role === 'manager'
 })
+
+// Données du dashboard depuis le backend
+const pendingOrdersCount = computed(() => dashboardStore.pendingOrdersCount)
+const walletBalance = computed(() => dashboardStore.wallet?.balance ?? 0)
+const userRating = computed(() => '4.8') // TODO: ajouter API pour note moyenne
+const isProviderOpen = computed(() => onboardingStore.isOpen || dashboardStore.isOpen)
 
 // ====================================================================
 // FONCTIONS UTILITAIRES
@@ -407,6 +572,68 @@ const loadUserData = (): void => {
     displayUser.value = JSON.parse(localUser)
     updateActiveShop()
   }
+}
+
+/**
+ * Charge les données du provider depuis le backend
+ */
+const loadProviderData = async (): Promise<void> => {
+  isLoadingData.value = true
+  try {
+    // Charger les données du dashboard (provider, stats, wallet, photo, etc.)
+    await dashboardStore.fetchDashboard()
+    
+    // Récupérer la photo depuis le dashboard (ajoutée à l'API)
+    const dashboardProvider = dashboardStore.data?.provider
+    if (dashboardProvider?.photo) {
+      providerPhoto.value = dashboardProvider.photo
+    }
+    
+    // Charger le statut d'onboarding pour le nom commercial
+    await onboardingStore.fetchStatus()
+    
+    // Charger les settings provider pour récupérer le logo
+    try {
+      const settingsResponse = await api.get('/providers/settings/')
+      if (settingsResponse.data?.logo_url) {
+        providerLogo.value = getImageUrl(settingsResponse.data.logo_url)
+      }
+      // Si pas de logo mais une photo storefront, l'utiliser
+      if (!providerLogo.value && settingsResponse.data?.storefront_photo_url) {
+        providerPhoto.value = getImageUrl(settingsResponse.data.storefront_photo_url)
+      }
+    } catch (settingsErr) {
+      console.warn('Settings non disponibles:', settingsErr)
+    }
+  } catch (err) {
+    console.error('Erreur chargement données provider:', err)
+  } finally {
+    isLoadingData.value = false
+  }
+}
+
+/**
+ * Formate un montant en devise FCFA
+ */
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('fr-CI', {
+    style: 'decimal',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount) + ' F'
+}
+
+/**
+ * Gère les erreurs de chargement d'image (affiche les initiales)
+ */
+const handleImageError = (event: Event): void => {
+  const img = event.target as HTMLImageElement
+  if (img) {
+    img.style.display = 'none'
+  }
+  // Réinitialiser pour afficher les initiales
+  providerPhoto.value = null
+  providerLogo.value = null
 }
 
 const updateActiveShop = (): void => {
@@ -473,29 +700,13 @@ const getPrestationBadgeClass = (prestation: string) => {
   return classes[prestation] || 'prestation-badge-blue';
 };
 
-// Fonction pour calculer le nombre de commandes en attente
-const calculatePendingOrders = (): number => {
-  try {
-    const savedOrders = localStorage.getItem('presso_orders')
-    if (savedOrders) {
-      const orders = JSON.parse(savedOrders)
-      return orders.filter((order: any) => order.status === 'pending').length
-    }
-  } catch (error) {
-    console.error('Erreur lors du calcul des commandes en attente:', error)
-  }
-  return 0
-}
-
-// Fonction pour calculer le nombre de notifications non lues
+// Fonction pour calculer le nombre de notifications non lues (local)
 const calculateUnreadNotifications = (): number => {
   try {
     const savedNotifications = localStorage.getItem('presso_notifications')
     if (savedNotifications) {
       const notifications = JSON.parse(savedNotifications)
-      const unreadCount = notifications.filter((notification: any) => !notification.read).length
-      console.log('Notifications non lues calculées:', unreadCount)
-      return unreadCount
+      return notifications.filter((notification: any) => !notification.read).length
     }
   } catch (error) {
     console.error('Erreur lors du calcul des notifications non lues:', error)
@@ -503,16 +714,18 @@ const calculateUnreadNotifications = (): number => {
   return 0
 }
 
-// Fonction pour mettre à jour le compteur de commandes en attente
-const updatePendingOrdersCount = (): void => {
-  pendingOrdersCount.value = calculatePendingOrders()
-}
-
 // Fonction pour mettre à jour le compteur de notifications non lues
 const updateUnreadNotificationsCount = (): void => {
-  const count = calculateUnreadNotifications()
-  unreadNotifications.value = count
-  console.log('Compteur de notifications mis à jour:', count)
+  unreadNotifications.value = calculateUnreadNotifications()
+}
+
+// Rafraîchir les données du dashboard (pour les compteurs)
+const refreshDashboardData = async (): Promise<void> => {
+  try {
+    await dashboardStore.fetchDashboard()
+  } catch (err) {
+    console.debug('Erreur rafraîchissement dashboard:', err)
+  }
 }
 
 // ====================================================================
@@ -746,13 +959,14 @@ const handleUserDataUpdate = (event: CustomEvent) => {
 const handleOrderStatusChange = (event: CustomEvent) => {
   const { orderId, newStatus } = event.detail
   console.log(`Statut de la commande ${orderId} changé en: ${newStatus}`)
-  updatePendingOrdersCount()
+  // Rafraîchir les données du dashboard pour mettre à jour les compteurs
+  refreshDashboardData()
 }
 
 // Écouter les mises à jour des commandes
 const handleOrdersUpdated = (event: CustomEvent) => {
-  console.log('Commandes mises à jour, recalcul des commandes en attente')
-  updatePendingOrdersCount()
+  console.log('Commandes mises à jour, rafraîchissement du dashboard')
+  refreshDashboardData()
 }
 
 // Écouter les mises à jour des notifications
@@ -796,9 +1010,12 @@ const handleKeydown = (event: KeyboardEvent) => {
 // LIFECYCLE HOOKS
 // ====================================================================
 
-onMounted(() => {
+onMounted(async () => {
   // Charger les données utilisateur au montage
   loadUserData()
+
+  // Charger les données du provider depuis le backend (logo, nom, stats...)
+  loadProviderData()
 
   // Charger l'état du sidebar depuis localStorage
   const savedState = localStorage.getItem('sidebarCollapsed')
@@ -811,8 +1028,7 @@ onMounted(() => {
   // Ouvrir le module correspondant à la route actuelle
   openModuleForCurrentRoute()
 
-  // Calculer les compteurs initiaux
-  updatePendingOrdersCount()
+  // Les compteurs sont maintenant calculés via les stores
   updateUnreadNotificationsCount()
 
   // DÉMARRER LA SIMULATION GLOBALE DES NOTIFICATIONS

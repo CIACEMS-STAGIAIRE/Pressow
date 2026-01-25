@@ -134,7 +134,7 @@
           </GroupElement>
 
           <!-- Type de service + Ville -->
-          <GroupElement name="location">
+          <GroupElement name="location" description="Pressow est actuellement disponible uniquement à Abidjan. D'autres villes seront bientôt ajoutées.">
             <SelectElement
               name="service_type"
               placeholder="Type de service"
@@ -150,16 +150,15 @@
               placeholder="Ville"
               field-name="Ville"
               :native="false"
-              :search="true"
-              input-type="search"
               :items="cityItems"
               :columns="{ container: 6, label: 12, wrapper: 12 }"
               :rules="['required']"
+              :default="'Abidjan'"
             />
           </GroupElement>
 
           <!-- Téléphone + Email -->
-          <GroupElement name="contact" description="L'email est facultatif mais recommandé">
+          <GroupElement name="contact" description="Le numéro de téléphone sera utilisé pour la connexion et les notifications clients. Il pourra être modifié ultérieurement avec vérification OTP.">
             <TextElement
               name="phone"
               input-type="tel"
@@ -172,31 +171,58 @@
             <TextElement
               name="email"
               input-type="email"
-              placeholder="Email (facultatif)"
+              placeholder="Email (facultatif mais recommandé)"
               field-name="Email"
               :columns="{ container: 6, label: 12, wrapper: 12 }"
               :rules="['nullable', 'email', 'max:255']"
+              description="Permet de recevoir des notifications de sécurité"
             />
           </GroupElement>
 
           <!-- Mot de passe -->
           <TextElement
             name="password"
-            input-type="password"
+            :input-type="showProviderPassword ? 'text' : 'password'"
             placeholder="Mot de passe"
             field-name="Mot de passe"
             description="Minimum 8 caractères"
             :rules="['required', 'min:8']"
-          />
+          >
+            <template #addon-after>
+              <button type="button" class="password-eye-btn" @click.prevent="showProviderPassword = !showProviderPassword" tabindex="-1">
+                <svg v-if="!showProviderPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </template>
+          </TextElement>
           
           <!-- Confirmation mot de passe -->
           <TextElement
             name="password_confirm"
-            input-type="password"
+            :input-type="showProviderPasswordConfirm ? 'text' : 'password'"
             placeholder="Confirmer le mot de passe"
             field-name="Confirmation"
             :rules="['required', 'same:password']"
-          />
+          >
+            <template #addon-after>
+              <button type="button" class="password-eye-btn" @click.prevent="showProviderPasswordConfirm = !showProviderPasswordConfirm" tabindex="-1">
+                <svg v-if="!showProviderPasswordConfirm" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </template>
+          </TextElement>
 
           <StaticElement name="divider2" tag="hr" :attrs="{ class: 'form-divider' }" />
 
@@ -286,21 +312,47 @@
           <!-- Mot de passe -->
           <TextElement
             name="password"
-            input-type="password"
+            :input-type="showClientPassword ? 'text' : 'password'"
             placeholder="Mot de passe"
             field-name="Mot de passe"
             description="Minimum 8 caractères"
             :rules="['required', 'min:8']"
-          />
+          >
+            <template #addon-after>
+              <button type="button" class="password-eye-btn" @click.prevent="showClientPassword = !showClientPassword" tabindex="-1">
+                <svg v-if="!showClientPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </template>
+          </TextElement>
           
           <!-- Confirmation mot de passe -->
           <TextElement
             name="password_confirm"
-            input-type="password"
+            :input-type="showClientPasswordConfirm ? 'text' : 'password'"
             placeholder="Confirmer le mot de passe"
             field-name="Confirmation"
             :rules="['required', 'same:password']"
-          />
+          >
+            <template #addon-after>
+              <button type="button" class="password-eye-btn" @click.prevent="showClientPasswordConfirm = !showClientPasswordConfirm" tabindex="-1">
+                <svg v-if="!showClientPasswordConfirm" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </template>
+          </TextElement>
 
           <StaticElement name="divider2" tag="hr" :attrs="{ class: 'form-divider' }" />
 
@@ -433,32 +485,10 @@ interface Notification {
 // DONNÉES STATIQUES
 // ====================================================================
 
+// Pour le lancement MVP, Pressow est disponible uniquement à Abidjan
+// D'autres villes seront ajoutées progressivement
 const cityItems = [
   { value: 'Abidjan', label: 'Abidjan' },
-  { value: 'Bouaké', label: 'Bouaké' },
-  { value: 'Daloa', label: 'Daloa' },
-  { value: 'Korhogo', label: 'Korhogo' },
-  { value: 'San-Pédro', label: 'San-Pédro' },
-  { value: 'Yamoussoukro', label: 'Yamoussoukro' },
-  { value: 'Divo', label: 'Divo' },
-  { value: 'Gagnoa', label: 'Gagnoa' },
-  { value: 'Abengourou', label: 'Abengourou' },
-  { value: 'Anyama', label: 'Anyama' },
-  { value: 'Grand-Bassam', label: 'Grand-Bassam' },
-  { value: 'Bingerville', label: 'Bingerville' },
-  { value: 'Agboville', label: 'Agboville' },
-  { value: 'Dabou', label: 'Dabou' },
-  { value: 'Adzopé', label: 'Adzopé' },
-  { value: 'Bondoukou', label: 'Bondoukou' },
-  { value: 'Man', label: 'Man' },
-  { value: 'Oumé', label: 'Oumé' },
-  { value: 'Sinfra', label: 'Sinfra' },
-  { value: 'Katiola', label: 'Katiola' },
-  { value: 'Ferkessédougou', label: 'Ferkessédougou' },
-  { value: 'Odienné', label: 'Odienné' },
-  { value: 'Séguéla', label: 'Séguéla' },
-  { value: 'Toumodi', label: 'Toumodi' },
-  { value: 'Tiassalé', label: 'Tiassalé' },
 ]
 
 const serviceTypeItems = [
@@ -490,6 +520,14 @@ const submittedPhone = ref('')
 const otpCode = ref('')
 const otpTimer = ref(60)
 let otpInterval: number | null = null
+
+// Visibilité des mots de passe - Formulaire Prestataire
+const showProviderPassword = ref(false)
+const showProviderPasswordConfirm = ref(false)
+
+// Visibilité des mots de passe - Formulaire Client
+const showClientPassword = ref(false)
+const showClientPasswordConfirm = ref(false)
 
 const notifications = ref<Notification[]>([])
 
@@ -835,41 +873,37 @@ onUnmounted(() => {
   margin-top: 6px !important;
 }
 
-/* Wrapper pour champ mot de passe avec bouton œil */
-.password-field-wrapper {
-  position: relative;
-  width: 100%;
-  margin-bottom: 8px;
-}
-
-.password-field-wrapper:last-child {
-  margin-bottom: 0;
-}
-
-/* Bouton toggle visibilité mot de passe */
-.password-toggle-btn {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+/* Bouton œil dans l'addon Vueform */
+.password-eye-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   cursor: pointer;
   padding: 8px;
-  color: #6B7280;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s ease;
-  z-index: 10;
+  margin-right: 8px;
+  color: #9CA3AF;
+  transition: all 0.2s ease;
+  height: 100%;
+  border-radius: 6px;
 }
 
-.password-toggle-btn:hover {
+.password-eye-btn:hover {
   color: #039AE3;
+  background: rgba(3, 154, 227, 0.08);
 }
 
-.password-toggle-btn i {
-  font-size: 16px;
+.password-eye-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Style de l'addon Vueform */
+.vf-addon-after {
+  background: transparent !important;
+  border-left: none !important;
+  padding-right: 4px !important;
 }
 </style>
 

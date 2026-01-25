@@ -56,6 +56,9 @@ export interface ProviderInfo {
   is_open: boolean
   type: string
   type_display: string
+  photo?: string | null
+  ville?: string
+  adresse?: string
 }
 
 /** Résumé du wallet pour le dashboard */

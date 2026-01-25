@@ -133,30 +133,66 @@
           <div v-if="showPasswordSection" class="section-content">
             <div class="form-group">
               <label for="current_password">Mot de passe actuel</label>
-              <input
-                type="password"
-                id="current_password"
-                v-model="passwordForm.current"
-                placeholder="••••••••"
-              />
+              <div class="password-input-wrapper">
+                <input
+                  :type="showCurrentPassword ? 'text' : 'password'"
+                  id="current_password"
+                  v-model="passwordForm.current"
+                  placeholder="••••••••"
+                />
+                <button type="button" class="password-toggle" @click="showCurrentPassword = !showCurrentPassword">
+                  <svg v-if="!showCurrentPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
             </div>
             <div class="form-group">
               <label for="new_password">Nouveau mot de passe</label>
-              <input
-                type="password"
-                id="new_password"
-                v-model="passwordForm.new_password"
-                placeholder="••••••••"
-              />
+              <div class="password-input-wrapper">
+                <input
+                  :type="showNewPassword ? 'text' : 'password'"
+                  id="new_password"
+                  v-model="passwordForm.new_password"
+                  placeholder="••••••••"
+                />
+                <button type="button" class="password-toggle" @click="showNewPassword = !showNewPassword">
+                  <svg v-if="!showNewPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
             </div>
             <div class="form-group">
               <label for="confirm_password">Confirmer le mot de passe</label>
-              <input
-                type="password"
-                id="confirm_password"
-                v-model="passwordForm.confirm"
-                placeholder="••••••••"
-              />
+              <div class="password-input-wrapper">
+                <input
+                  :type="showConfirmPassword ? 'text' : 'password'"
+                  id="confirm_password"
+                  v-model="passwordForm.confirm"
+                  placeholder="••••••••"
+                />
+                <button type="button" class="password-toggle" @click="showConfirmPassword = !showConfirmPassword">
+                  <svg v-if="!showConfirmPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
             </div>
             <button type="button" class="change-password-btn" @click="changePassword" :disabled="isChangingPassword">
               <span v-if="!isChangingPassword">Changer le mot de passe</span>
@@ -295,6 +331,11 @@ const isChangingPassword = ref(false)
 const showPasswordSection = ref(false)
 const showLogoutConfirm = ref(false)
 
+// Password visibility toggles
+const showCurrentPassword = ref(false)
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
+
 // Toast state
 const showToast = ref(false)
 const toastMessage = ref('')
@@ -334,7 +375,8 @@ function loadUserData() {
     form.last_name = user.last_name || ''
     form.email = user.email || ''
     form.phone = formatPhoneForDisplay(user.phone || '')
-    form.address = user.address || localStorage.getItem('presso_default_address') || ''
+    // L'adresse est stockée localement (pas dans le modèle User)
+    form.address = localStorage.getItem('presso_default_address') || ''
   }
 }
 
@@ -670,6 +712,38 @@ onMounted(() => {
   font-size: 0.75rem;
   color: #9ca3af;
   margin-top: 6px;
+}
+
+/* Password Input Wrapper */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  padding-right: 50px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.password-toggle:hover {
+  background: #f3f4f6;
+  color: #37A1EF;
 }
 
 .phone-input-group {

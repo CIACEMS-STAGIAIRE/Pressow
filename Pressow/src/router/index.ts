@@ -15,8 +15,9 @@ import { useOnboardingStore } from '@/stores/onboarding'
 const Accueil = () => import('@/Views/Accueil/Accueil.vue')
 const Connexion = () => import('@/Views/Auth/Connexion.vue')
 const Inscription = () => import('@/Views/Auth/Inscription.vue')
+const MotDePasseOublie = () => import('@/Views/Auth/MotDePasseOublie.vue')
 
-// Dashboard et composants communs
+// Dashboard et composants communs (Prestataire)
 const Dashboard = () => import('@/Views/ViewsCommun/Dashboard.vue')
 const Commandes = () => import('@/Views/ViewsCommun/Commandes.vue')
 const Notifications = () => import('@/Views/ViewsCommun/Notifications.vue')
@@ -24,12 +25,8 @@ const Portefeuille = () => import('@/Views/ViewsCommun/Portefeuille.vue')
 const Services = () => import('@/Views/ViewsCommun/Services.vue')
 const Statistics = () => import('@/Views/ViewsCommun/Statistics.vue')
 const Avis = () => import('@/Views/ViewsCommun/Avis.vue')
-
-// Pages de configuration
-const Profile = () => import('@/Views/DashboardOthers/Profile.vue')
-const ProfileGeneral = () => import('@/Views/DashboardGeneral/Profile.vue')
-const Parametres = () => import('@/Views/DashboardOthers/Parametres.vue')
-const ParametresGeneral = () => import('@/Views/DashboardGeneral/Parametres.vue')
+const Profile = () => import('@/Views/ViewsCommun/Profile.vue')
+const Parametres = () => import('@/Views/ViewsCommun/Parametres.vue')
 
 // Onboarding (à créer)
 const OnboardingSetup = () => import('@/Views/Onboarding/OnboardingSetup.vue')
@@ -90,6 +87,12 @@ const router = createRouter({
       name: 'register',
       component: Inscription,
       meta: { title: 'Inscription - Presso' }
+    },
+    {
+      path: '/mot-de-passe-oublie',
+      name: 'forgot-password',
+      component: MotDePasseOublie,
+      meta: { title: 'Mot de passe oublié - Presso' }
     },
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -199,31 +202,9 @@ const router = createRouter({
       }
     },
     {
-      path: '/Dashboard/profile-general',
-      name: 'profile-general',
-      component: ProfileGeneral,
-      meta: {
-        requiresAuth: true,
-        requiresProvider: true,
-        requiresOnboardingComplete: true,
-        title: 'Profil - Presso'
-      }
-    },
-    {
       path: '/Dashboard/parametres',
       name: 'parametres',
       component: Parametres,
-      meta: {
-        requiresAuth: true,
-        requiresProvider: true,
-        requiresOnboardingComplete: true,
-        title: 'Paramètres - Presso'
-      }
-    },
-    {
-      path: '/Dashboard/parametres-general',
-      name: 'parametres-general',
-      component: ParametresGeneral,
       meta: {
         requiresAuth: true,
         requiresProvider: true,
